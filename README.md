@@ -25,7 +25,7 @@ A drag-and-drop workspace to build and test complex logic circuits.
 A flexible canvas for creating algorithms visually.
 * **Official Symbols:** Terminals, Processes, Input/Output, Decisions, and Subroutines.
 * **Smart Connections:** Dynamic wires that snap to ports and support loop-backs.
-* **Export Options:** Save your diagrams as SVG or PNG for assignments.
+* **Export Options:** Save your diagrams as a PNG for assignments.
 * **Embedded Pseudocode:** Ability to attach pseudocode logic to specific modules.
 
 ## 📁 Project Structure
