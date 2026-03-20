@@ -540,9 +540,9 @@ footer {
   </a>
   <div class="title-center">IGCSE Computer Science — Interactive Study Tools</div>
   <div class="title-actions">
-    <a class="title-btn" href="pseudocode.html">Pseudocode ↗</a>
-    <a class="title-btn" href="logic-gates.html">Logic Gates ↗</a>
-    <a class="title-btn" href="flowcharts.html">Flowcharts ↗</a>
+    <a class="title-btn" href="src/pseudocode.html">Pseudocode ↗</a>
+    <a class="title-btn" href="src/logic-gates.html">Logic Gates ↗</a>
+    <a class="title-btn" href="src/flowcharts.html">Flowcharts ↗</a>
     <button class="title-btn" id="btn-theme">⏾</button>
   </div>
 </div>
@@ -616,7 +616,7 @@ footer {
           <span class="card-feat">Multi-file</span>
         </div>
         <div class="card-actions">
-          <a class="btn-launch" href="pseudocode.html">
+          <a class="btn-launch" href="src/pseudocode.html">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Open IDE
           </a>
@@ -650,7 +650,7 @@ footer {
           <span class="card-feat">Export PNG</span>
         </div>
         <div class="card-actions">
-          <a class="btn-launch" href="logic-gates.html" style="background:var(--cyan);color:#0d0d12">
+          <a class="btn-launch" href="src/logic-gates.html" style="background:var(--cyan);color:#0d0d12">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Open Simulator
           </a>
@@ -687,7 +687,7 @@ footer {
           <span class="card-feat">B&amp;W Export</span>
         </div>
         <div class="card-actions">
-          <a class="btn-launch" href="flowcharts.html" style="background:var(--green);color:#0d0d12">
+          <a class="btn-launch" href="src/flowcharts.html" style="background:var(--green);color:#0d0d12">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Open Lab
           </a>
@@ -808,9 +808,9 @@ const modalTag    = document.getElementById('modal-doc-tag');
 const closeBtn    = document.getElementById('modal-close');
 
 const DOC_PATHS = {
-  'pseudocode':  '../assets/docs/pseudocode.md',
-  'logic-gates': '../assets/docs/logic-gates.md',
-  'flowcharts':  '../assets/docs/flowcharts.md',
+  'pseudocode':  'assets/docs/pseudocode.md',
+  'logic-gates': 'assets/docs/logic-gates.md',
+  'flowcharts':  'assets/docs/flowcharts.md',
 };
 
 async function openDoc(docKey, title) {
@@ -826,11 +826,21 @@ async function openDoc(docKey, title) {
     const md  = await res.text();
     modalBody.innerHTML = marked.parse(md);
   } catch (err) {
+    const isFileProtocol = location.protocol === 'file:';
     modalBody.innerHTML = `
-      <div style="color:var(--red);font-family:var(--font-mono);font-size:12px;padding:20px 0;">
-        <strong>Could not load documentation.</strong><br><br>
-        Make sure the file exists at <code>${DOC_PATHS[docKey]}</code>.<br><br>
-        <span style="color:var(--text-muted)">${err.message}</span>
+      <div style="font-family:var(--font-mono);font-size:12px;padding:20px 0;line-height:2;">
+        <span style="color:var(--red);font-size:13px;font-weight:700;">Could not load documentation.</span><br><br>
+        ${isFileProtocol ? `
+        <span style="color:var(--yellow);">&#9888; You are opening this file directly from disk (file://).</span><br>
+        Browsers block fetch() on the file:// protocol for security reasons.<br><br>
+        <span style="color:var(--text-secondary);">To preview locally, run a dev server in the project root:</span><br>
+        <code style="color:var(--cyan);">npx serve .</code><br>
+        <span style="color:var(--text-muted);">Then open http://localhost:3000 in your browser.</span><br><br>
+        <span style="color:var(--text-muted);">Docs will also work fine once deployed to GitHub Pages.</span>
+        ` : `
+        <span style="color:var(--text-secondary);">Make sure the file exists at: <code>${DOC_PATHS[docKey]}</code></span><br>
+        <span style="color:var(--text-muted);">${err.message}</span>
+        `}
       </div>`;
   }
 }
