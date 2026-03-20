@@ -9,7 +9,7 @@ const SNIPPETS = [
 DECLARE Target : INTEGER
 DECLARE Found : BOOLEAN
 DECLARE Index : INTEGER
-DECLARE FoundAt : INTEGER
+DECLARE FoundAt : INTEGER 
 
 // Fill the array with 10 values
 FOR Index ← 1 TO 10
@@ -76,6 +76,7 @@ DECLARE Value : REAL
 Total ← 0.0
 Count ← 0
 
+// taking in all inputs, and finding the total, and how many numbers were inputted
 REPEAT
    INPUT Value
    IF Value <> -1 THEN
@@ -84,6 +85,7 @@ REPEAT
    ENDIF
 UNTIL Value = -1
 
+// calculating the average and outputting everything
 IF Count > 0 THEN
    Average ← Total / Count
    OUTPUT "Total: ", Total
@@ -97,6 +99,7 @@ DECLARE Max : REAL
 DECLARE Min : REAL
 DECLARE i : INTEGER
 
+// example data
 Numbers[1] ← 4.5
 Numbers[2] ← 7.2
 Numbers[3] ← 1.3
@@ -106,6 +109,7 @@ Numbers[5] ← 3.1
 Max ← Numbers[1]
 Min ← Numbers[1]
 
+// sorting finding smallest and largest number
 FOR i ← 2 TO 5
    IF Numbers[i] > Max THEN
       Max ← Numbers[i]
@@ -115,6 +119,7 @@ FOR i ← 2 TO 5
    ENDIF
 NEXT i
 
+// outputting the results
 OUTPUT "Maximum: ", Max
 OUTPUT "Minimum: ", Min` },
     ]
@@ -180,16 +185,43 @@ NEXT i
 FOR i ← 1 TO 5
    OUTPUT Scores[i]
 NEXT i` },
+      { name: '2D Array', icon: 'arr', code: `DECLARE Scores : ARRAY[1:5, 1:2] OF INTEGER
+DECLARE i : INTEGER
+DECLARE j : INTEGER
+
+FOR j ← 1 TO 2
+  FOR i ← 1 TO 5
+    INPUT Scores[i, j]
+  NEXT i
+NEXT j
+
+FOR j ← 1 TO 2
+  FOR i ← 1 TO 5
+    OUTPUT Scores[i, j]
+  NEXT i
+NEXT j` },
       { name: 'File Read', icon: 'file', code: `DECLARE Line : STRING
 
 OPENFILE "data.txt" FOR READ
 
-WHILE NOT EOF("data.txt") DO
-   READFILE "data.txt", Line
-   OUTPUT Line
-ENDWHILE
+READFILE "data.txt", Line
+OUTPUT Line
 
-CLOSEFILE "data.txt"` },
+CLOSEFILE "data.txt"
+` },
+      { name: 'File Write', icon: 'file', code: `DECLARE Line : STRING
+
+OPENFILE "data.txt" FOR WRITE
+
+WRITEFILE "data.txt", "Hello, World!"
+
+CLOSEFILE "data.txt"
+` },
+      { name: 'Library Routines', icon: 'file', code: `OUTPUT LENGTH("Happy Days")
+OUTPUT LCASE("Wowza")
+OUTPUT UCASE("Happy")
+OUTPUT SUBSTRING("Happy Days", 2, 4)
+` },
     ]
   }
 ];
