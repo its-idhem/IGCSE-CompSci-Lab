@@ -14,6 +14,8 @@ A specialized code editor tailored to the Cambridge IGCSE pseudocode standard.
 * **Algorithm Snippets:** Pre-loaded examples of common algorithms like Linear Search and Bubble Sort.
 * **Syllabus Compliant:** Uses standard notation like `DECLARE`, `←`, and `OUTPUT`.
 
+*there is a limitation with the IDE's power because there is no backend*
+
 ### 2. Logic Gate Simulator
 A drag-and-drop workspace to build and test complex logic circuits.
 * **Full Component Library:** Includes AND, OR, NOT, NAND, NOR, and XOR gates.
