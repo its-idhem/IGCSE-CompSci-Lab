@@ -34,14 +34,14 @@ Flowcharts use specific shapes to represent different types of instructions. Sta
 ### Selection (IF Statements)
 In a flowchart, selection is shown using a Decision diamond. One path is followed if the condition is True, and another if it is False.
 
-"LINK FOR FLOWCHART SELECTION EXAMPLE HERE"
+![Diamond](../img/decision-diamond.png)
 
 ### Iteration (Loops)
 Loops are created by drawing a flow line that points back to an earlier part of the flowchart.
 * **Pre-condition (WHILE)**: The decision diamond appears *before* the process.
 * **Post-condition (REPEAT)**: The decision diamond appears *after* the process.
 
-"LINK FOR FLOWCHART LOOP EXAMPLE HERE"
+![Flowchart Loops](../img/.flowchart-loops.png)
 
 ---
 
