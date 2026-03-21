@@ -82,10 +82,16 @@ function computeSymDims(type, fullLabel) {
 
 // ── Port positions ────────────────────────────────────────
 function portPos(sym, portName) {
-  // JUNCTION: all ports return center so every wire meets at one point,
-  // giving the appearance of a seamless T-intersection without a visible dot.
   if (sym.type === 'JUNCTION') {
-    return { x: sym.x + sym.w/2, y: sym.y + sym.h/2 };
+    const cx = sym.x + sym.w/2, cy = sym.y + sym.h/2;
+    // top/bottom stay at centre so the vertical through-wire is seamless.
+    // left/right return the actual edge so loop arrowheads sit visibly on
+    // the correct side instead of being buried inside the through-wire.
+    switch (portName) {
+      case 'left':  return { x: sym.x,         y: cy };
+      case 'right': return { x: sym.x + sym.w, y: cy };
+      default:      return { x: cx,             y: cy };
+    }
   }
   const w = sym.w, h = sym.h;
   switch (portName) {
@@ -612,7 +618,7 @@ function onWireUp(e){
   const sp=clientToSVG(e.clientX,e.clientY);
   if(wireDrag.lineSnap){
     const ls=wireDrag.lineSnap;
-    addJunctionOnConn(ls.connId,ls.x,ls.y,wireDrag.fromId,wireDrag.fromPort);
+    addJunctionOnConn(ls.connId,ls.x,ls.y,wireDrag.fromId,wireDrag.fromPort,sp.x);
   } else {
     const snp=findSnap(sp.x,sp.y,wireDrag.fromId);
     if(snp) addConnection(wireDrag.fromId,wireDrag.fromPort,snp.symId,snp.port);
@@ -694,7 +700,7 @@ document.getElementById('blm-yes').addEventListener('click',function(){
     _pendingConn=null;
   } else if(_pendingConnJunction){
     const p=_pendingConnJunction; _pendingConnJunction=null;
-    _doAddJunctionOnConn(p.connId,p.jx,p.jy,p.srcId,p.srcPort,'Yes');
+    _doAddJunctionOnConn(p.connId,p.jx,p.jy,p.srcId,p.srcPort,'Yes',p.approachX);
   }
 });
 document.getElementById('blm-no').addEventListener('click',function(){
@@ -705,7 +711,7 @@ document.getElementById('blm-no').addEventListener('click',function(){
     _pendingConn=null;
   } else if(_pendingConnJunction){
     const p=_pendingConnJunction; _pendingConnJunction=null;
-    _doAddJunctionOnConn(p.connId,p.jx,p.jy,p.srcId,p.srcPort,'No');
+    _doAddJunctionOnConn(p.connId,p.jx,p.jy,p.srcId,p.srcPort,'No',p.approachX);
   }
 });
 document.getElementById('blm-cancel').addEventListener('click',function(){
@@ -713,7 +719,7 @@ document.getElementById('blm-cancel').addEventListener('click',function(){
 });
 
 // Split an existing connection with a JUNCTION node (enables loop routing)
-function addJunctionOnConn(connId,jx,jy,srcId,srcPort){
+function addJunctionOnConn(connId,jx,jy,srcId,srcPort,approachX){
   const srcSym=symbols.find(function(s){return s.id===srcId;});
   if(srcSym&&srcSym.type==='DECISION'){
     // DECISION branches need a Yes/No label — show the modal first, then create junction
@@ -721,16 +727,16 @@ function addJunctionOnConn(connId,jx,jy,srcId,srcPort){
     const avail=['Yes','No'].filter(function(l){return !used.includes(l);});
     if(avail.length===0) return;
     if(avail.length===1){
-      _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,avail[0]);
+      _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,avail[0],approachX);
     } else {
-      _pendingConnJunction={connId,jx,jy,srcId,srcPort};
+      _pendingConnJunction={connId,jx,jy,srcId,srcPort,approachX};
       branchOverlay.style.display='flex';
     }
   } else {
-    _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,null);
+    _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,null,approachX);
   }
 }
-function _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,label){
+function _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,label,approachX){
   const orig=connections.find(function(c){return c.id===connId;});
   if(!orig) return;
   const junc={id:uid(),type:'JUNCTION',x:Math.round(jx-5),y:Math.round(jy-5),w:10,h:10,text:'',embeddedCode:''};
@@ -740,11 +746,17 @@ function _doAddJunctionOnConn(connId,jx,jy,srcId,srcPort,label){
   // Re-route original flow through the junction
   connections.push({id:uid(),fromId,fromPort,toId:junc.id,toPort:'top',label:origLabel});
   connections.push({id:uid(),fromId:junc.id,fromPort:'bottom',toId,toPort,label:null});
-  // Add the new wire (loop/branch) into the junction, with the branch label
+  // Determine which side the loop wire actually routes to by tracing the real path.
+  // orthPathFull runs the same obstacle-avoidance logic used to draw the wire, so its
+  // pts[2] waypoint (the first turn after the exit stub) tells us whether the wire
+  // loops to the left or right of the junction — regardless of source position or
+  // how avoidance reroutes the path.
   const srcSym=symbols.find(function(s){return s.id===srcId;});
-  const srcP=srcSym?portPos(srcSym,srcPort):{x:0,y:0};
-  const inPort=srcP.x<jx?'left':'right';
-  connections.push({id:uid(),fromId:srcId,fromPort:srcPort,toId:junc.id,toPort:inPort,label:label});
+  const fp=srcSym?portPos(srcSym,srcPort):{x:jx,y:jy};
+  const preview=orthPathFull(fp,srcPort,{x:jx,y:jy},'top',srcId,null);
+  const pathX=preview.pts[2]?preview.pts[2][0]:fp.x;
+  const inPort=pathX<=jx?'left':'right';
+  connections.push({id:uid(),fromId:srcId,fromPort:srcPort,toId:junc.id,toPort:inPort,label:label,loopEntry:true});
   renderAll(); save();
 }
 
@@ -882,15 +894,27 @@ function deleteSym(id){
 function deleteConn(id){
   const conn=connections.find(function(c){return c.id===id;});
   if(!conn){connections=connections.filter(function(c){return c.id!==id;});if(selId===id)selId=null;renderAll();save();return;}
-  // If either endpoint of the deleted connection is a JUNCTION,
-  // remove the entire junction cluster so users never have dangling half-arrows.
+  // If either endpoint is a JUNCTION, dissolve it cleanly.
+  // When the loop wire (loopEntry:true) is deleted, restore the original through-path.
+  // When a through-wire is deleted, dissolve the junction without reconnecting.
   const fromSym=symbols.find(function(s){return s.id===conn.fromId;});
   const toSym  =symbols.find(function(s){return s.id===conn.toId;});
-  const juncId =(toSym  &&toSym.type  ==='JUNCTION')?toSym.id
-               :(fromSym&&fromSym.type==='JUNCTION')?fromSym.id:null;
-  if(juncId){
+  const juncSym=(toSym  &&toSym.type  ==='JUNCTION')?toSym
+               :(fromSym&&fromSym.type==='JUNCTION')?fromSym:null;
+  if(juncSym){
+    const juncId=juncSym.id;
+    const jConns=connections.filter(function(c){return c.fromId===juncId||c.toId===juncId;});
+    const throughIn =jConns.find(function(c){return c.toId===juncId&&!c.loopEntry;});
+    const throughOut=jConns.find(function(c){return c.fromId===juncId;});
     connections=connections.filter(function(c){return c.fromId!==juncId&&c.toId!==juncId;});
     symbols=symbols.filter(function(s){return s.id!==juncId;});
+    // Restore the original through-path only when user deleted the loop wire
+    if(conn.loopEntry&&throughIn&&throughOut){
+      connections.push({id:uid(),
+        fromId:throughIn.fromId,fromPort:throughIn.fromPort,
+        toId:throughOut.toId,toPort:throughOut.toPort,
+        label:throughIn.label});
+    }
   } else {
     connections=connections.filter(function(c){return c.id!==id;});
   }
@@ -902,7 +926,8 @@ function deleteConn(id){
 //  KEYBOARD SHORTCUTS
 // ══════════════════════════════════════════════════════════
 document.addEventListener('keydown',function(e){
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||
+     e.target.contentEditable==='true') return;
 
   // FIX E: Arrow keys nudge selected symbol(s)
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown'){
@@ -1006,7 +1031,20 @@ document.getElementById('btn-close-panel').addEventListener('click',function(){
 document.getElementById('btn-open-panel').addEventListener('click',function(){
   rightPanel.classList.remove('rp-collapsed');
   resizer.style.display='';
-  positionZoomControls();
+  // Wait for the panel's 0.2s CSS width transition to fully complete.
+  // e.target check is critical: transitionend bubbles, so child-element
+  // transitions (buttons, shapes, etc.) would otherwise fire this too early.
+  var _done=false;
+  function _place(){
+    if(_done)return; _done=true;
+    rightPanel.removeEventListener('transitionend',_onT);
+    positionZoomControls();
+  }
+  function _onT(e){
+    if(e.target===rightPanel&&e.propertyName==='width') _place();
+  }
+  rightPanel.addEventListener('transitionend',_onT);
+  setTimeout(_place,250); // fallback: 50ms after transition should have ended
 });
 
 // ══════════════════════════════════════════════════════════
@@ -1418,7 +1456,7 @@ function exportBW(){
     e.setAttribute('fill','none'); e.setAttribute('stroke','#111111');
     e.setAttribute('stroke-width','1.5'); e.setAttribute('stroke-linecap','round');
     e.setAttribute('stroke-linejoin','round');
-    e.setAttribute('marker-end','url(#arr-bw)'); e.removeAttribute('class');
+    if(e.hasAttribute('marker-end')) e.setAttribute('marker-end','url(#arr-bw)'); e.removeAttribute('class');
   });
   // Branch label backgrounds
   clone.querySelectorAll('.conn-label-bg').forEach(function(e){
@@ -1462,6 +1500,19 @@ function load(){
   try{
     symbols    =JSON.parse(localStorage.getItem('cie_fc_s')||'[]');
     connections=JSON.parse(localStorage.getItem('cie_fc_c')||'[]');
+    // Migrate loop-entry connections: recompute toPort so old saved diagrams
+    // (which may have 'top' or the wrong 'left'/'right') are corrected on load.
+    connections.forEach(function(conn){
+      if(!conn.loopEntry) return;
+      const junc=symbols.find(function(s){return s.id===conn.toId&&s.type==='JUNCTION';});
+      const srcSym=symbols.find(function(s){return s.id===conn.fromId;});
+      if(!junc||!srcSym) return;
+      const jx=junc.x+junc.w/2, jy=junc.y+junc.h/2;
+      const fp=portPos(srcSym,conn.fromPort);
+      const preview=orthPathFull(fp,conn.fromPort,{x:jx,y:jy},'top',conn.fromId,null);
+      const pathX=preview.pts[2]?preview.pts[2][0]:fp.x;
+      conn.toPort=pathX<=jx?'left':'right';
+    });
     // Migrate old symbols that predate sym.w / sym.h
     symbols.forEach(function(sym){
       if(!sym.w||!sym.h){
