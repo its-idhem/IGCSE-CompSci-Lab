@@ -58,7 +58,7 @@ A flexible canvas for creating algorithms visually.
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/IGCSE-CompSci-Lab.git
+    git clone https://github.com/its-idhem/IGCSE-CompSci-Lab.git
     ```
 2.  **Run Locally:**
     Because the site uses `fetch()` to load documentation, it is recommended to run a local server:
