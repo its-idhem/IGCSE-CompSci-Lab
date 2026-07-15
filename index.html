@@ -3,300 +3,267 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IGCSE CompSci Lab</title>
+<title>IGCSE Computer Science Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <style>
-/* ── THEME VARIABLES (matching existing pages) ───────── */
 :root {
-  --bg-main:       #0d0d12;
-  --bg-panel:      #131318;
-  --bg-editor:     #0f0f15;
-  --bg-sidebar:    #0a0a0f;
-  --bg-hover:      #1a1a24;
-  --bg-active:     #1e1e2e;
-  --accent:        #a78bfa;
-  --accent-dim:    rgba(167,139,250,0.15);
-  --accent-glow:   rgba(167,139,250,0.25);
-  --green:         #22c55e;
-  --red:           #f87171;
-  --yellow:        #fbbf24;
-  --cyan:          #67e8f9;
-  --text-primary:  #e2e8f0;
-  --text-secondary:#94a3b8;
-  --text-muted:    #475569;
-  --border:        rgba(148,163,184,0.08);
-  --border-bright: rgba(167,139,250,0.2);
-  --scrollbar:     rgba(100,100,140,0.2);
-  --font-mono:     'JetBrains Mono','Fira Code',monospace;
-  --font-ui:       'Outfit',sans-serif;
-  --radius:        6px;
-  --transition:    0.15s cubic-bezier(0.4,0,0.2,1);
+  --bg-base:       #1A1512;
+  --bg-surface:    #231E1A;
+  --bg-card:       #2A2420;
+  --bg-elevated:   #332C27;
+  --bg-input:      #1E1916;
+  --accent:        #D4A34A;
+  --accent-dim:    rgba(212,163,74,0.12);
+  --accent-glow:   rgba(212,163,74,0.2);
+  --secondary:     #7A9BAA;
+  --secondary-dim: rgba(122,155,170,0.1);
+  --tertiary:      #8BA87A;
+  --tertiary-dim:  rgba(139,168,122,0.1);
+  --red:           #C06060;
+  --text-primary:  #E8E0D4;
+  --text-secondary:#9A8E7E;
+  --text-muted:    #6B6258;
+  --border:        rgba(154,142,126,0.12);
+  --border-bright: rgba(212,163,74,0.25);
+  --font-display:  'Lora', Georgia, serif;
+  --font-body:     'Inter', -apple-system, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+  --radius:        10px;
+  --transition:    0.2s ease;
 }
 
 body.light-mode {
-  --bg-main:       #f8fafc;
-  --bg-panel:      #f0f0f5;
-  --bg-editor:     #ffffff;
-  --bg-sidebar:    #e8e8f0;
-  --bg-hover:      #ede9fb;
-  --bg-active:     #d8d8ee;
-  --accent:        #7c3aed;
-  --accent-dim:    rgba(124,58,237,0.12);
-  --accent-glow:   rgba(124,58,237,0.2);
-  --green:         #15803d;
-  --red:           #dc2626;
-  --yellow:        #b45309;
-  --cyan:          #0369a1;
-  --text-primary:  #1e1b2e;
-  --text-secondary:#4a4a6a;
-  --text-muted:    #7a7a9a;
-  --border:        rgba(0,0,0,0.08);
-  --border-bright: rgba(124,58,237,0.25);
-  --scrollbar:     rgba(0,0,0,0.12);
+  --bg-base:       #FDF8F0;
+  --bg-surface:    #F5F0E6;
+  --bg-card:       #FFFFFF;
+  --bg-elevated:   #FAF5EB;
+  --bg-input:      #F0EBE0;
+  --accent:        #9A7A3A;
+  --accent-dim:    rgba(154,122,58,0.1);
+  --accent-glow:   rgba(154,122,58,0.15);
+  --secondary:     #4A7A8A;
+  --secondary-dim: rgba(74,122,138,0.08);
+  --tertiary:      #5A7A4A;
+  --tertiary-dim:  rgba(90,122,74,0.08);
+  --red:           #A04040;
+  --text-primary:  #2A2420;
+  --text-secondary:#5A524A;
+  --text-muted:    #8A827A;
+  --border:        rgba(42,36,32,0.08);
+  --border-bright: rgba(154,122,58,0.2);
 }
 
-/* ── RESET ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
-
+::-webkit-scrollbar-thumb { background: rgba(154,142,126,0.15); border-radius: 3px; }
 html { scroll-behavior: smooth; }
 
 body {
-  background: var(--bg-main);
+  background: var(--bg-base);
   color: var(--text-primary);
-  font-family: var(--font-ui);
+  font-family: var(--font-body);
   font-size: 14px;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-/* ── TITLEBAR ─────────────────────────────────────────── */
 #titlebar {
-  position: fixed; top: 0; left: 0; right: 0; height: 38px;
-  background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 12px; z-index: 200; gap: 16px;
+  position: fixed; top: 0; left: 0; right: 0; height: 48px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px; z-index: 200; gap: 16px;
+  backdrop-filter: blur(12px);
 }
 .logo {
-  display: flex; align-items: center; gap: 8px;
-  font-weight: 700; font-size: 13px; color: var(--accent);
-  letter-spacing: 0.5px; text-decoration: none; white-space: nowrap; flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display); font-weight: 600; font-size: 15px;
+  color: var(--accent); letter-spacing: -0.3px; text-decoration: none;
+  white-space: nowrap; flex-shrink: 0; font-style: italic;
 }
-.logo svg { width: 20px; height: 20px; flex-shrink: 0; }
+.logo svg { width: 16px; height: 16px; flex-shrink: 0; }
 .title-center {
-  flex: 1; text-align: center; font-size: 12px;
+  flex: 1; text-align: center; font-size: 11px;
   color: var(--text-muted); font-family: var(--font-mono);
+  letter-spacing: 0.5px;
 }
 .title-actions { display: flex; gap: 6px; align-items: center; }
 .title-btn {
   background: transparent; border: 1px solid var(--border);
-  color: var(--text-secondary); font-family: var(--font-ui);
-  font-size: 11px; padding: 3px 10px; border-radius: var(--radius);
+  color: var(--text-secondary); font-family: var(--font-body);
+  font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 6px;
   cursor: pointer; transition: var(--transition);
   display: flex; align-items: center; gap: 5px;
   text-decoration: none; white-space: nowrap;
 }
-.title-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-bright); }
-#btn-theme { font-size: 14px; padding: 4px 10px; }
+.title-btn:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-bright); }
+#btn-theme { font-size: 15px; padding: 4px 10px; min-width: 32px; justify-content: center; }
 
-/* ── PAGE CONTENT ─────────────────────────────────────── */
 #page {
-  padding-top: 38px;
+  padding-top: 48px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
-/* ── HERO ─────────────────────────────────────────────── */
 #hero {
   position: relative;
-  padding: 80px 24px 72px;
+  padding: 100px 24px 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  overflow: hidden;
 }
 
-/* Animated background grid */
-#hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image:
-    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(167,139,250,0.12) 0%, transparent 70%),
-    linear-gradient(rgba(148,163,184,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148,163,184,0.04) 1px, transparent 1px);
-  background-size: 100% 100%, 40px 40px, 40px 40px;
-  pointer-events: none;
-  z-index: 0;
-}
-/* Glowing orbs */
-#hero::after {
-  content: '';
-  position: absolute;
-  width: 500px; height: 500px;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -60%);
-  background: radial-gradient(circle, rgba(167,139,250,0.07) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-  animation: pulse-orb 6s ease-in-out infinite;
-}
-@keyframes pulse-orb {
-  0%, 100% { opacity: 0.6; transform: translate(-50%, -60%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
-}
+.hero-content { position: relative; z-index: 1; max-width: 680px; }
 
-.hero-inner { position: relative; z-index: 1; max-width: 640px; }
-
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--accent-dim); border: 1px solid var(--border-bright);
-  color: var(--accent); font-size: 10px; font-weight: 600;
-  font-family: var(--font-mono); letter-spacing: 1.5px; text-transform: uppercase;
-  padding: 4px 12px; border-radius: 100px; margin-bottom: 28px;
-  animation: fade-up 0.5s ease both;
-}
-.hero-badge-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--accent); animation: blink 2s ease-in-out infinite;
-}
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-.hero-logo-mark {
-  width: 52px; height: 52px; margin: 0 auto 20px;
-  animation: fade-up 0.5s ease 0.1s both;
-}
-.hero-logo-mark svg {
-  width: 100%; height: 100%; color: var(--accent);
-  filter: drop-shadow(0 0 16px rgba(167,139,250,0.4));
-}
-
-h1.hero-title {
-  font-size: clamp(28px, 5vw, 46px);
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.5px;
+.hero-heading {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--text-primary);
-  margin-bottom: 14px;
-  animation: fade-up 0.5s ease 0.15s both;
+  margin-bottom: 8px;
+  font-style: italic;
+  animation: fade-in 0.6s ease both;
 }
-h1.hero-title span {
-  color: var(--accent);
-  text-shadow: 0 0 30px rgba(167,139,250,0.35);
+
+.hero-rule {
+  width: 60px;
+  height: 2px;
+  background: var(--accent);
+  margin: 20px auto 20px;
+  border-radius: 1px;
+  animation: fade-in 0.6s ease 0.1s both;
 }
 
 .hero-sub {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
   color: var(--text-secondary);
   line-height: 1.7;
-  max-width: 480px;
+  max-width: 520px;
   margin: 0 auto 36px;
-  animation: fade-up 0.5s ease 0.2s both;
+  font-style: italic;
+  font-weight: 400;
+  animation: fade-in 0.6s ease 0.15s both;
 }
 
-.hero-meta {
+.hero-tools {
   display: flex; align-items: center; justify-content: center;
-  gap: 20px; flex-wrap: wrap;
-  animation: fade-up 0.5s ease 0.25s both;
+  gap: 28px; flex-wrap: wrap;
+  animation: fade-in 0.6s ease 0.25s both;
 }
-.hero-meta-item {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-family: var(--font-mono);
+.hero-tool {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-family: var(--font-mono);
   color: var(--text-muted);
+  transition: var(--transition);
 }
-.hero-meta-item svg { color: var(--accent); opacity: 0.7; }
-.hero-meta-divider { width: 1px; height: 14px; background: var(--border); }
+.hero-tool:hover { color: var(--text-secondary); }
+.hero-tool-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+}
+.hero-tool-dot.gold { background: var(--accent); }
+.hero-tool-dot.blue { background: var(--secondary); }
+.hero-tool-dot.green { background: var(--tertiary); }
 
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(14px); }
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── SECTION WRAPPER ──────────────────────────────────── */
 .section {
-  padding: 0 24px 64px;
-  max-width: 1100px;
+  padding: 0 24px 72px;
+  max-width: 1080px;
   margin: 0 auto;
   width: 100%;
 }
-.section-label {
-  font-size: 10px; font-weight: 600; letter-spacing: 2px;
-  text-transform: uppercase; color: var(--accent);
-  font-family: var(--font-mono);
-  margin-bottom: 6px;
+.section-header {
+  margin-bottom: 32px;
+  text-align: center;
 }
 .section-title {
-  font-size: 20px; font-weight: 700;
-  color: var(--text-primary); margin-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 600;
+  color: var(--text-primary); margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+.section-rule {
+  width: 40px;
+  height: 1.5px;
+  background: var(--accent);
+  margin: 0 auto 10px;
+  border-radius: 1px;
 }
 .section-sub {
-  font-size: 13px; color: var(--text-muted); margin-bottom: 28px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.6;
 }
-
-/* ── TOOL CARDS ───────────────────────────────────────── */
-#tools { padding-top: 0; }
 
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .tool-card {
-  background: var(--bg-panel);
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 24px;
+  border-radius: var(--radius);
+  padding: 28px;
   display: flex; flex-direction: column; gap: 16px;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
-  position: relative; overflow: hidden;
-  animation: fade-up 0.5s ease both;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+  animation: fade-in 0.5s ease both;
 }
-.tool-card:nth-child(1) { animation-delay: 0.3s; }
-.tool-card:nth-child(2) { animation-delay: 0.38s; }
-.tool-card:nth-child(3) { animation-delay: 0.46s; }
+.tool-card:nth-child(1) { animation-delay: 0.1s; }
+.tool-card:nth-child(2) { animation-delay: 0.18s; }
+.tool-card:nth-child(3) { animation-delay: 0.26s; }
 
-.tool-card::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 0% 0%, var(--card-glow, rgba(167,139,250,0.06)), transparent 60%);
-  pointer-events: none;
-}
 .tool-card:hover {
   border-color: var(--border-bright);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-glow);
   transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25);
 }
+
+.card-header { display: flex; align-items: flex-start; gap: 14px; }
 
 .card-icon {
   width: 40px; height: 40px;
-  background: var(--accent-dim);
-  border: 1px solid var(--border-bright);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.card-icon svg { width: 20px; height: 20px; color: var(--accent); }
+.card-icon.gold { background: var(--accent-dim); border: 1px solid rgba(212,163,74,0.15); }
+.card-icon.blue { background: var(--secondary-dim); border: 1px solid rgba(122,155,170,0.15); }
+.card-icon.green { background: var(--tertiary-dim); border: 1px solid rgba(139,168,122,0.15); }
 
-.card-header { display: flex; align-items: center; gap: 12px; }
+.card-icon svg { width: 20px; height: 20px; }
+.card-icon.gold svg { color: var(--accent); }
+.card-icon.blue svg { color: var(--secondary); }
+.card-icon.green svg { color: var(--tertiary); }
 
+.card-meta { flex: 1; }
 .card-title {
-  font-size: 15px; font-weight: 700;
-  color: var(--text-primary); line-height: 1.2;
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 600;
+  color: var(--text-primary); line-height: 1.3;
+  margin-bottom: 2px;
 }
 .card-tag {
-  font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+  font-size: 10px; font-weight: 500; letter-spacing: 1px;
   text-transform: uppercase; font-family: var(--font-mono);
-  color: var(--text-muted); margin-top: 2px;
+  color: var(--text-muted);
 }
 
 .card-desc {
-  font-size: 12.5px; color: var(--text-secondary);
+  font-size: 13px; color: var(--text-secondary);
   line-height: 1.65; flex: 1;
 }
 
@@ -306,9 +273,9 @@ h1.hero-title span {
 .card-feat {
   font-size: 10px; font-family: var(--font-mono);
   color: var(--text-muted);
-  background: var(--bg-editor);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  padding: 2px 8px; border-radius: 100px;
+  padding: 3px 8px; border-radius: 4px;
 }
 
 .card-actions {
@@ -316,89 +283,50 @@ h1.hero-title span {
 }
 .btn-launch {
   flex: 1;
-  background: var(--accent); color: #0d0d12;
-  font-family: var(--font-ui); font-size: 12px; font-weight: 700;
-  border: none; border-radius: var(--radius); padding: 8px 14px;
+  font-family: var(--font-body); font-size: 12px; font-weight: 600;
+  border: none; border-radius: 6px; padding: 10px 16px;
   cursor: pointer; transition: var(--transition); text-decoration: none;
   display: flex; align-items: center; justify-content: center; gap: 6px;
-  letter-spacing: 0.3px;
 }
-.btn-launch:hover { filter: brightness(1.15); box-shadow: 0 4px 16px rgba(167,139,250,0.35); }
+.btn-launch.gold { background: var(--accent); color: var(--bg-base); }
+.btn-launch.blue { background: var(--secondary); color: var(--bg-base); }
+.btn-launch.green { background: var(--tertiary); color: var(--bg-base); }
+.btn-launch:hover { filter: brightness(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
 .btn-docs {
   background: transparent; border: 1px solid var(--border);
-  color: var(--text-secondary); font-family: var(--font-ui);
-  font-size: 11px; padding: 8px 12px; border-radius: var(--radius);
+  color: var(--text-secondary); font-family: var(--font-body);
+  font-size: 12px; font-weight: 500; padding: 10px 14px; border-radius: 6px;
   cursor: pointer; transition: var(--transition);
-  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-.btn-docs:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-bright); }
+.btn-docs:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-bright); }
 
-/* ── ABOUT SECTION ───────────────────────────────────── */
-#about {
-  padding-top: 16px;
-}
-.about-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-@media (max-width: 700px) {
-  .about-grid { grid-template-columns: 1fr; }
-}
-.about-card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px 22px;
-}
-.about-card-title {
-  font-size: 12px; font-weight: 600;
-  color: var(--accent); font-family: var(--font-mono);
-  letter-spacing: 0.5px; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 8px;
-}
-.about-card-title svg { width: 13px; height: 13px; }
-.about-card p {
-  font-size: 12.5px; color: var(--text-secondary); line-height: 1.7;
-}
-.about-card p + p { margin-top: 8px; }
-
-.syllabus-list {
-  list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 6px;
-}
-.syllabus-list li {
-  display: flex; align-items: flex-start; gap: 8px;
-  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
-}
-.syl-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--accent); flex-shrink: 0; margin-top: 5px;
-}
-
-/* ── FOOTER ───────────────────────────────────────────── */
 footer {
   margin-top: auto;
-  background: var(--bg-sidebar);
+  background: var(--bg-surface);
   border-top: 1px solid var(--border);
   padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
 }
 .footer-left {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 10px;
   font-size: 12px; color: var(--text-muted);
 }
-.footer-left .logo-sm {
+.footer-logo {
   display: flex; align-items: center; gap: 6px;
-  font-weight: 700; color: var(--accent); font-size: 12px;
+  font-family: var(--font-display); font-weight: 600;
+  color: var(--accent); font-size: 12px; font-style: italic;
 }
-.footer-left .logo-sm svg { width: 14px; height: 14px; }
+.footer-logo svg { width: 14px; height: 14px; }
 .footer-sep { color: var(--text-muted); opacity: 0.4; }
 .footer-right {
   display: flex; align-items: center; gap: 16px;
+}
+.footer-tag {
+  font-size: 10px; font-family: var(--font-mono);
+  color: var(--text-muted); letter-spacing: 0.5px;
 }
 .footer-link {
   font-size: 11px; font-family: var(--font-mono);
@@ -406,30 +334,25 @@ footer {
   transition: var(--transition); display: flex; align-items: center; gap: 5px;
 }
 .footer-link:hover { color: var(--accent); }
-.footer-tag {
-  font-size: 10px; font-family: var(--font-mono);
-  color: var(--text-muted); letter-spacing: 1px;
-}
 
-/* ── MARKDOWN MODAL ───────────────────────────────────── */
 #modal-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
   z-index: 500; align-items: center; justify-content: center;
   padding: 24px;
 }
 #modal-overlay.open { display: flex; }
 
 #modal-box {
-  background: var(--bg-panel);
+  background: var(--bg-card);
   border: 1px solid var(--border-bright);
   border-radius: 12px;
   width: 100%; max-width: 760px;
   max-height: calc(100vh - 48px);
   display: flex; flex-direction: column;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--accent-glow);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
   overflow: hidden;
-  animation: modal-in 0.2s cubic-bezier(0.4,0,0.2,1);
+  animation: modal-in 0.2s ease;
 }
 @keyframes modal-in {
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -442,7 +365,7 @@ footer {
 }
 .modal-title-row { display: flex; align-items: center; gap: 10px; }
 #modal-doc-title {
-  font-size: 13px; font-weight: 700; color: var(--text-primary);
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
 }
 #modal-doc-tag {
   font-size: 9px; font-family: var(--font-mono); letter-spacing: 1.5px;
@@ -455,14 +378,13 @@ footer {
   cursor: pointer; font-size: 13px; transition: var(--transition);
   display: flex; align-items: center; justify-content: center;
 }
-#modal-close:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-bright); }
+#modal-close:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-bright); }
 
 #modal-body {
   flex: 1; overflow-y: auto; padding: 24px 28px;
   font-size: 13px; line-height: 1.75; color: var(--text-secondary);
 }
 
-/* Markdown Styles inside modal */
 #modal-body h1 { font-size: 20px; color: var(--text-primary); margin: 0 0 16px; font-weight: 700; }
 #modal-body h2 { font-size: 15px; color: var(--accent); margin: 28px 0 10px; font-weight: 700; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 #modal-body h3 { font-size: 13px; color: var(--text-primary); margin: 18px 0 8px; font-weight: 600; }
@@ -471,11 +393,11 @@ footer {
 #modal-body li { margin-bottom: 4px; }
 #modal-body code {
   font-family: var(--font-mono); font-size: 11.5px;
-  background: var(--bg-editor); border: 1px solid var(--border);
-  padding: 1px 6px; border-radius: 3px; color: var(--cyan);
+  background: var(--bg-input); border: 1px solid var(--border);
+  padding: 1px 6px; border-radius: 3px; color: var(--secondary);
 }
 #modal-body pre {
-  background: var(--bg-editor); border: 1px solid var(--border);
+  background: var(--bg-input); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 14px 16px; margin: 12px 0;
   overflow-x: auto;
 }
@@ -485,19 +407,19 @@ footer {
   display: block; line-height: 1.7;
 }
 #modal-body strong { color: var(--text-primary); font-weight: 600; }
-#modal-body em { color: var(--yellow); font-style: italic; }
+#modal-body em { color: var(--accent); font-style: italic; }
 #modal-body table {
   width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px;
 }
 #modal-body th {
-  background: var(--bg-editor); border: 1px solid var(--border);
+  background: var(--bg-input); border: 1px solid var(--border);
   padding: 6px 10px; text-align: left; color: var(--accent); font-family: var(--font-mono);
   font-size: 11px; letter-spacing: 0.5px;
 }
 #modal-body td {
   border: 1px solid var(--border); padding: 6px 10px; color: var(--text-secondary);
 }
-#modal-body tr:nth-child(even) td { background: rgba(148,163,184,0.03); }
+#modal-body tr:nth-child(even) td { background: rgba(154,142,126,0.03); }
 #modal-body blockquote {
   border-left: 3px solid var(--accent); padding-left: 14px;
   color: var(--text-muted); font-style: italic; margin: 12px 0;
@@ -507,7 +429,7 @@ footer {
 #modal-body img {
   max-width: 100%; height: auto; border-radius: var(--radius);
   border: 1px solid var(--border); margin: 8px 0; display: block;
-  background: var(--bg-editor);
+  background: var(--bg-input);
 }
 #modal-body hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
@@ -523,9 +445,8 @@ footer {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── RESPONSIVE ───────────────────────────────────────── */
 @media (max-width: 640px) {
-  #hero { padding: 56px 16px 48px; }
+  #hero { padding: 64px 16px 48px; }
   .tools-grid { grid-template-columns: 1fr; }
   .section { padding-left: 16px; padding-right: 16px; }
   footer { flex-direction: column; align-items: flex-start; }
@@ -535,93 +456,70 @@ footer {
 </head>
 <body>
 
-<!-- TITLEBAR -->
 <div id="titlebar">
   <a class="logo" href="#">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 2 L22 12 L12 22 L2 12 Z"/>
     </svg>
-    CIE CompSci Lab
+    IGCSE Computer Science Lab
   </a>
-  <div class="title-center">IGCSE Computer Science — Interactive Study Tools</div>
+  <div class="title-center">Computer Science — Interactive Study Tools</div>
   <div class="title-actions">
-    <a class="title-btn" href="src/pseudocode.html">Pseudocode ↗</a>
-    <a class="title-btn" href="src/logic-gates.html">Logic Gates ↗</a>
-    <a class="title-btn" href="src/flowcharts.html">Flowcharts ↗</a>
-    <button class="title-btn" id="btn-theme">⏾</button>
+    <a class="title-btn" href="src/pseudocode.html">Pseudocode</a>
+    <a class="title-btn" href="src/logic-gates.html">Logic Gates</a>
+    <a class="title-btn" href="src/flowcharts.html">Flowcharts</a>
+    <button class="title-btn" id="btn-theme" title="Toggle theme">◐</button>
   </div>
 </div>
 
-<!-- PAGE -->
 <div id="page">
 
-  <!-- HERO -->
   <section id="hero">
-    <div class="hero-inner">
-      <div class="hero-badge">
-        <span class="hero-badge-dot"></span>
-        Cambridge IGCSE™ &amp; O Level · Syllabus 2023–2028
-      </div>
-      <div class="hero-logo-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2 L22 12 L12 22 L2 12 Z"/>
-          <path d="M12 7 L17 12 L12 17 L7 12 Z" stroke-width="1"/>
-        </svg>
-      </div>
-      <h1 class="hero-title">IGCSE <span>CompSci</span> Lab</h1>
-      <p class="hero-sub">An interactive toolkit for Cambridge Computer Science students — write &amp; run pseudocode, simulate logic circuits, and build flowcharts, all in your browser.</p>
-      <div class="hero-meta">
-        <div class="hero-meta-item">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          Pseudocode IDE
-        </div>
-        <div class="hero-meta-divider"></div>
-        <div class="hero-meta-item">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><line x1="7" y1="12" x2="14" y2="8"/><line x1="7" y1="12" x2="14" y2="16"/></svg>
-          Logic Gates
-        </div>
-        <div class="hero-meta-divider"></div>
-        <div class="hero-meta-item">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="8" y="16" width="8" height="5" rx="1"/><line x1="6" y1="8" x2="6" y2="11"/><line x1="18" y1="8" x2="18" y2="11"/><line x1="6" y1="11" x2="18" y2="11"/><line x1="12" y1="11" x2="12" y2="16"/></svg>
-          Flowcharts
-        </div>
+    <div class="hero-content">
+      <h1 class="hero-heading">IGCSE Computer Science Lab</h1>
+      <div class="hero-rule"></div>
+      <p class="hero-sub">Write pseudocode, simulate logic circuits, and build flowcharts — all in your browser. Built for Cambridge IGCSE &amp; O Level.</p>
+
+      <div class="hero-tools">
+        <div class="hero-tool"><span class="hero-tool-dot gold"></span>Pseudocode IDE</div>
+        <div class="hero-tool"><span class="hero-tool-dot blue"></span>Logic Gates</div>
+        <div class="hero-tool"><span class="hero-tool-dot green"></span>Flowcharts</div>
       </div>
     </div>
   </section>
 
-  <!-- TOOL CARDS -->
   <div class="section" id="tools">
-    <div class="section-label">Interactive Tools</div>
-    <div class="section-title">Pick a tool to get started</div>
-    <p class="section-sub">Each tool is standalone — no installation, no sign-in. Open the syntax guide anytime with the Docs button.</p>
+    <div class="section-header">
+      <div class="section-title">Interactive Tools</div>
+      <div class="section-rule"></div>
+      <p class="section-sub">Each tool runs entirely in the browser. No install, no sign-in.</p>
+    </div>
 
     <div class="tools-grid">
 
-      <!-- Pseudocode -->
-      <div class="tool-card" style="--card-glow:rgba(167,139,250,0.08)">
+      <div class="tool-card">
         <div class="card-header">
-          <div class="card-icon">
+          <div class="card-icon gold">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M8 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/>
               <path d="M8 3v6h8"/>
               <path d="M8 13l2 2-2 2M12 17h4"/>
             </svg>
           </div>
-          <div>
+          <div class="card-meta">
             <div class="card-title">Pseudocode IDE</div>
             <div class="card-tag">Write · Run · Debug</div>
           </div>
         </div>
-        <p class="card-desc">A full-featured pseudocode editor with syntax highlighting, a live console, step-through debugger, variable trace table, and CIE-spec linter. Supports all Cambridge pseudocode constructs.</p>
+        <p class="card-desc">Full-featured pseudocode editor with syntax highlighting, live console, step-through debugger, variable trace table, and CIE-spec linter.</p>
         <div class="card-features">
           <span class="card-feat">Syntax Highlighting</span>
           <span class="card-feat">Step Debugger</span>
           <span class="card-feat">Trace Table</span>
           <span class="card-feat">Linter</span>
-          <span class="card-feat">Multi-file</span>
         </div>
         <div class="card-actions">
-          <a class="btn-launch" href="src/pseudocode.html">
+          <a class="btn-launch gold" href="src/pseudocode.html">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Open IDE
           </a>
@@ -632,30 +530,28 @@ footer {
         </div>
       </div>
 
-      <!-- Logic Gates -->
-      <div class="tool-card" style="--card-glow:rgba(103,232,249,0.06)">
+      <div class="tool-card">
         <div class="card-header">
-          <div class="card-icon" style="background:rgba(103,232,249,0.1);border-color:rgba(103,232,249,0.2)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <div class="card-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 5 L17 12 L3 19 Z"/>
               <circle cx="20" cy="12" r="2.5"/>
             </svg>
           </div>
-          <div>
+          <div class="card-meta">
             <div class="card-title">Logic Gates</div>
             <div class="card-tag">Build · Simulate · Analyse</div>
           </div>
         </div>
-        <p class="card-desc">Drag-and-drop logic gate simulator. Wire up AND, OR, NOT, NAND, NOR, XOR gates with inputs &amp; outputs. Generates truth tables and Boolean expressions automatically.</p>
+        <p class="card-desc">Drag-and-drop logic gate simulator. Wire up AND, OR, NOT, NAND, NOR, XOR gates. Generates truth tables and Boolean expressions automatically.</p>
         <div class="card-features">
           <span class="card-feat">6 Gate Types</span>
           <span class="card-feat">Truth Table</span>
           <span class="card-feat">Boolean Expr</span>
           <span class="card-feat">Live Sim</span>
-          <span class="card-feat">Export PNG</span>
         </div>
         <div class="card-actions">
-          <a class="btn-launch" href="src/logic-gates.html" style="background:var(--cyan);color:#0d0d12">
+          <a class="btn-launch blue" href="src/logic-gates.html">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Open Simulator
           </a>
@@ -666,11 +562,10 @@ footer {
         </div>
       </div>
 
-      <!-- Flowcharts -->
-      <div class="tool-card" style="--card-glow:rgba(34,197,94,0.06)">
+      <div class="tool-card">
         <div class="card-header">
-          <div class="card-icon" style="background:rgba(34,197,94,0.1);border-color:rgba(34,197,94,0.2)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <div class="card-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="7" height="4" rx="1"/>
               <rect x="14" y="3" width="7" height="4" rx="1"/>
               <rect x="8" y="17" width="8" height="4" rx="1"/>
@@ -678,21 +573,20 @@ footer {
               <line x1="6" y1="10" x2="18" y2="10"/><line x1="12" y1="10" x2="12" y2="17"/>
             </svg>
           </div>
-          <div>
+          <div class="card-meta">
             <div class="card-title">Flowchart Lab</div>
             <div class="card-tag">Design · Generate · Run</div>
           </div>
         </div>
-        <p class="card-desc">Visual flowchart and structure diagram builder. Drag shapes, connect nodes, and auto-generate pseudocode from your diagram. Includes a simulator that runs directly from the flowchart.</p>
+        <p class="card-desc">Visual flowchart and structure diagram builder. Drag shapes, connect nodes, and auto-generate pseudocode. Includes a simulator that runs directly from the diagram.</p>
         <div class="card-features">
           <span class="card-feat">Auto Pseudocode</span>
           <span class="card-feat">Structure Diagrams</span>
           <span class="card-feat">Simulator</span>
           <span class="card-feat">Trace Table</span>
-          <span class="card-feat">Export PNG</span>
         </div>
         <div class="card-actions">
-          <a class="btn-launch" href="src/flowcharts.html" style="background:var(--green);color:#0d0d12">
+          <a class="btn-launch green" href="src/flowcharts.html">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             Open Lab
           </a>
@@ -706,76 +600,26 @@ footer {
     </div>
   </div>
 
-  <!-- ABOUT -->
-  <div class="section" id="about">
-    <div class="section-label">About</div>
-    <div class="section-title">What is IGCSE Computer Science?</div>
-    <p class="section-sub">Cambridge IGCSE &amp; O Level Computer Science (0478 / 2210) — Syllabus 2023–2028</p>
-
-    <div class="about-grid">
-      <div class="about-card">
-        <div class="about-card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          Overview
-        </div>
-        <p>Cambridge IGCSE Computer Science introduces students to the principles of programming, problem-solving, and computational thinking. It prepares learners for further study in computing and related fields.</p>
-        <p>The course is examined at Cambridge International Examinations and is widely recognised by universities worldwide as evidence of strong analytical and technical ability.</p>
-      </div>
-      <div class="about-card">
-        <div class="about-card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          Topics Covered by This Lab
-        </div>
-        <ul class="syllabus-list">
-          <li><span class="syl-dot"></span><span><strong>Pseudocode</strong> — Cambridge-standard pseudocode: variables, loops, conditionals, procedures, functions, arrays, file handling.</span></li>
-          <li><span class="syl-dot"></span><span><strong>Logic Gates</strong> — AND, OR, NOT, NAND, NOR, XOR; truth tables; Boolean expressions.</span></li>
-          <li><span class="syl-dot"></span><span><strong>Flowcharts</strong> — START/STOP, INPUT/OUTPUT, PROCESS, DECISION shapes; structure diagrams for modular design.</span></li>
-        </ul>
-      </div>
-      <div class="about-card">
-        <div class="about-card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Exam Tips
-        </div>
-        <ul class="syllabus-list">
-          <li><span class="syl-dot"></span><span>Always use the <strong>exact Cambridge keywords</strong> in pseudocode: <code>INPUT</code>, <code>OUTPUT</code>, <code>FOR … TO … NEXT</code>, <code>WHILE … DO … ENDWHILE</code>.</span></li>
-          <li><span class="syl-dot"></span><span>Flowchart shapes must match their function — use a <strong>diamond</strong> for decisions, a <strong>parallelogram</strong> for I/O, and <strong>rounded rectangles</strong> for start/stop.</span></li>
-          <li><span class="syl-dot"></span><span>In logic questions, always show your working using a <strong>truth table</strong> before writing the Boolean expression.</span></li>
-        </ul>
-      </div>
-      <div class="about-card">
-        <div class="about-card-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-          Who is this for?
-        </div>
-        <p>This lab is designed for students studying Cambridge IGCSE or O Level Computer Science (syllabuses 0478 &amp; 2210). It is also useful for AS Level students revisiting foundational topics.</p>
-        <p>All tools run entirely in the browser — no accounts, no installs. Works on desktop and tablet.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
   <footer>
     <div class="footer-left">
-      <div class="logo-sm">
+      <div class="footer-logo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2 L22 12 L12 22 L2 12 Z"/></svg>
-        CIE CompSci Lab
+        IGCSE Computer Science Lab
       </div>
       <span class="footer-sep">·</span>
       <span>Cambridge IGCSE Computer Science</span>
     </div>
     <div class="footer-right">
-      <span class="footer-tag">Syllabus 0478 / 2210 &nbsp;·&nbsp; 2023–2028</span>
+      <span class="footer-tag">0478 / 2210 · 2023–2028</span>
       <a class="footer-link" href="https://github.com/its-idhem/IGCSE-CompSci-Lab" target="_blank" rel="noopener">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
-        its-idhem
+        GitHub
       </a>
     </div>
   </footer>
 
-</div><!-- end #page -->
+</div>
 
-<!-- DOCS MODAL -->
 <div id="modal-overlay">
   <div id="modal-box">
     <div id="modal-header">
@@ -795,7 +639,6 @@ footer {
 </div>
 
 <script>
-/* ── THEME TOGGLE ─────────────────────────────────────── */
 const themeBtn = document.getElementById('btn-theme');
 const savedTheme = localStorage.getItem('cie-theme');
 if (savedTheme === 'light') document.body.classList.add('light-mode');
@@ -805,7 +648,6 @@ themeBtn.addEventListener('click', () => {
   localStorage.setItem('cie-theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
 });
 
-/* ── DOCS MODAL ───────────────────────────────────────── */
 const overlay     = document.getElementById('modal-overlay');
 const modalBody   = document.getElementById('modal-body');
 const modalTitle  = document.getElementById('modal-doc-title');
@@ -829,7 +671,6 @@ async function openDoc(docKey, title) {
     const res = await fetch(DOC_PATHS[docKey]);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     let md = await res.text();
-    // Rewrite image paths: ../img/ → assets/img/ (correct relative to root index.html)
     md = md.replace(/\.\.\//g, 'assets/');
     modalBody.innerHTML = marked.parse(md);
   } catch (err) {
@@ -838,10 +679,10 @@ async function openDoc(docKey, title) {
       <div style="font-family:var(--font-mono);font-size:12px;padding:20px 0;line-height:2;">
         <span style="color:var(--red);font-size:13px;font-weight:700;">Could not load documentation.</span><br><br>
         ${isFileProtocol ? `
-        <span style="color:var(--yellow);">&#9888; You are opening this file directly from disk (file://).</span><br>
+        <span style="color:var(--accent);">&#9888; You are opening this file directly from disk (file://).</span><br>
         Browsers block fetch() on the file:// protocol for security reasons.<br><br>
         <span style="color:var(--text-secondary);">To preview locally, run a dev server in the project root:</span><br>
-        <code style="color:var(--cyan);">npx serve .</code><br>
+        <code style="color:var(--secondary);">npx serve .</code><br>
         <span style="color:var(--text-muted);">Then open http://localhost:3000 in your browser.</span><br><br>
         <span style="color:var(--text-muted);">Docs will also work fine once deployed to GitHub Pages.</span>
         ` : `
