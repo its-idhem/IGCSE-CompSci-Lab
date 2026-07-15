@@ -54,6 +54,23 @@ A flexible canvas for creating algorithms visually.
 * **Responsive Design:** Uses a dark-themed, "IDE-style" UI inspired by modern developer tools.
 * **Local Persistence:** Uses `localStorage` to save your work-in-progress circuits and code locally in your browser.
 
+## Mobile Support
+
+All three tools are fully responsive and work on tablets and phones.
+
+| Tool | Mobile Nav Bar | Touch Interactions |
+|------|---------------|-------------------|
+| Pseudocode IDE | Editor · Console · Snippets | Tap to switch views, auto-switch to Console on Run |
+| Logic Gates | Components · Truth Table | Tap-to-place, tap-to-connect ports, pinch-to-zoom |
+| Flowchart Lab | Symbols · Code & Run | Tap-to-place, slide-up bottom sheets, swipe-to-close |
+
+**Common features:**
+- Slide-up bottom sheets for sidebars on narrow screens
+- Larger touch targets for buttons and interactive elements
+- Pinch-to-zoom and touch pan on canvas-based tools
+- Prevents iOS zoom on input focus (`font-size: 16px`)
+- Persistent layout restoration when rotating back to landscape/desktop
+
 ## Usage
 
 1.  **Clone the repository:**
@@ -67,6 +84,8 @@ A flexible canvas for creating algorithms visually.
     npx serve .
     ```
 3.  Open `http://localhost:3000` in your browser.
+
+    > **Note:** You can also open `index.html` directly from the file system — the IDE, simulator, and lab all work fine. However, the documentation (Docs buttons) won't load because browsers block `fetch()` on the `file://` protocol for security reasons.
 
 ## License
 This project is open-source and intended for educational purposes. Feel free to fork and adapt for your classroom or personal study. 
