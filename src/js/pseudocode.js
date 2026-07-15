@@ -36,38 +36,37 @@ ELSE
    OUTPUT "Not found"
 ENDIF` },
       { name: 'Bubble Sort', icon: 'sort', code: `DECLARE Arr : ARRAY[1:10] OF INTEGER
-DECLARE i : INTEGER
-DECLARE j : INTEGER
-DECLARE Temp : INTEGER
-DECLARE Swapped : BOOLEAN
+DECLARE Temp, Count : INTEGER
+DECLARE Swap : BOOLEAN
+DECLARE IndexPassed : INTEGER
+CONSTANT ArrayLength <- 10
+IndexPassed ← 0
 
 // Fill the array with 10 values
-FOR i ← 1 TO 10
-   OUTPUT "Enter value for position ", i
-   INPUT Arr[i]
-NEXT i
+FOR Count ← 1 TO 10
+   OUTPUT "Enter value for position ", Count
+   INPUT Arr[Count]
+NEXT Count
 
-// Sort
-FOR i ← 1 TO 9
-   Swapped ← FALSE
-   FOR j ← 1 TO (10 - i)
-      IF Arr[j] > Arr[j + 1] THEN
-         Temp ← Arr[j]
-         Arr[j] ← Arr[j + 1]
-         Arr[j + 1] ← Temp
-         Swapped ← TRUE
-      ENDIF
-   NEXT j
-   IF Swapped = FALSE THEN
-      // Array already sorted, exit early
-   ENDIF
-NEXT i
+// The actual bubble sort
+REPEAT
+    Swap ← FALSE
+    FOR Count ← 1 TO (ArrayLength - 1) - IndexPassed
+        IF Arr[Count] > Arr[Count + 1] THEN
+            Temp ← Arr[Count]
+            Arr[Count] ← Arr[Count + 1]
+            Arr[Count + 1] ← Temp
+            Swap ← TRUE
+        ENDIF
+    NEXT Count
+    IndexPassed ← IndexPassed + 1
+UNTIL NOT Swap
 
-// Output sorted array
+// Outputting the sorted array
 OUTPUT "Sorted array:"
-FOR i ← 1 TO 10
-   OUTPUT Arr[i]
-NEXT i` },
+FOR Count ← 1 TO 10
+   OUTPUT Arr[Count]
+NEXT Count` },
       { name: 'Totaling / Average', icon: 'sum', code: `DECLARE Total : REAL
 DECLARE Count : INTEGER
 DECLARE Average : REAL
@@ -234,11 +233,11 @@ const KEYWORDS = ['DECLARE','CONSTANT','ARRAY','OF','INPUT','OUTPUT','IF','THEN'
   'OTHERWISE','PROCEDURE','ENDPROCEDURE','CALL','FUNCTION','ENDFUNCTION','RETURNS','RETURN',
   'BYVAL','BYREF','TYPE','ENDTYPE','CLASS','ENDCLASS','INHERITS','SUPER','NEW','PUBLIC','PRIVATE',
   'OPENFILE','CLOSEFILE','READFILE','WRITEFILE','SEEK','GETRECORD','PUTRECORD','FOR','NOT','AND','OR',
-  'DEFINE','SET','DIV','MOD','APPEND','READ','WRITE','RANDOM'];
+  'DIV','MOD','APPEND','READ','WRITE'];
 
 const TYPES = ['INTEGER','REAL','CHAR','STRING','BOOLEAN','DATE'];
 const BOOLS = ['TRUE','FALSE'];
-const BUILTINS = ['LENGTH','LCASE','UCASE','MID','RIGHT','INT','RAND','ROUND','SUBSTRING','EOF'];
+const BUILTINS = ['LENGTH','LCASE','UCASE','MID','RIGHT','LEFT','INT','RAND','RANDOM','ROUND','SUBSTRING','EOF'];
 
 function highlight(code) {
   const lines = code.split('\n');
@@ -358,6 +357,7 @@ const lineNumbers = document.getElementById('line-numbers');
 let autoSaveEnabled = true;
 let linterEnabled = true;
 let lineNumbersEnabled = true;
+let enforceDeclareEnabled = true;
 let currentSidebarPanel = 'snippets';
 
 function updateEditor() {
@@ -523,6 +523,10 @@ let declaredTypes    = {};   // varName → 'INTEGER' | 'REAL' | 'CHAR' | 'STRIN
 let isRunning        = false;
 let interpDeadline   = Infinity; // ms timestamp; exceeded → throw timeout error
 const RUN_TIMEOUT_MS = 100000;    // 100 seconds
+// Yield counter — every N statements we do a real setTimeout to break the
+// microtask chain and keep the browser responsive on large programs.
+let interpYieldCounter = 0;
+const YIELD_EVERY_N_STMTS = 8000;
 
 // Step-mode
 let interpStepMode = false;
@@ -648,8 +652,6 @@ function _traceCommit() {
 function traceVar(lineNum, name, val) {
   if (!traceColOrder.includes(name)) traceColOrder.push(name);
   const valStr = (val === null || val === undefined) ? '' : String(val);
-  // Don't create a trace row when a variable is cleared to an empty string
-  if (valStr === '') return;
 // Commit the buffer if this variable is already in the current open row
   if (_traceCurrent && Object.prototype.hasOwnProperty.call(_traceCurrent.vars, name)) {
     _traceCommit();
@@ -736,7 +738,11 @@ async function setVar(env, name, val, lineNum) {
     const aName   = am[1];
     const idxExpr = am[2].trim();
     if (typeof env[aName] !== 'object' || env[aName] === null || env[aName] === UNINITIALIZED) {
-      throw { message: `Error on Line ${lineNum}: '${aName}' is not a declared array` };
+      if (!enforceDeclareEnabled) {
+        env[aName] = {};
+      } else {
+        throw { message: `Error on Line ${lineNum}: '${aName}' is not a declared array` };
+      }
     }
     // Evaluate each dimension of the index — use splitArgs so that
     // expressions like  Grid[SnakeCords[1, 2], SnakeCords[1, 1]]
@@ -753,8 +759,13 @@ async function setVar(env, name, val, lineNum) {
 }
 
 function getVar(env, name, lineNum) {
-  if (!Object.prototype.hasOwnProperty.call(env, name))
+  if (!Object.prototype.hasOwnProperty.call(env, name)) {
+    if (!enforceDeclareEnabled) {
+      env[name] = UNINITIALIZED;
+      return env[name];
+    }
     throw { message: `Error on Line ${lineNum}: Variable '${name}' has not been declared` };
+  }
   const v = env[name];
   if (v === UNINITIALIZED)
     throw { message: `Error on Line ${lineNum}: Variable '${name}' is used before being assigned a value` };
@@ -779,31 +790,40 @@ async function evalExpr(expr, env, lineNum) {
   if (/^-?\d+(\.\d+)?$/.test(expr)) return parseFloat(expr);
 
   // 4. Array element  Arr[idx]  or  Grid[r,c]  (allow optional space before [)
+  // Uses bracket-depth matching so expressions like Arr[i+j] work correctly.
   {
-    const am = expr.match(/^(\w+)\s*\[(.+)\]$/);
+    const am = expr.match(/^(\w+)\s*\[/);
     if (am) {
       const aName = am[1];
-      if (!Object.prototype.hasOwnProperty.call(env, aName))
-        throw { message: `Error on Line ${lineNum}: Array '${aName}' has not been declared` };
-      const arr = env[aName];
-      if (typeof arr !== 'object' || arr === null || arr === UNINITIALIZED)
-        throw { message: `Error on Line ${lineNum}: '${aName}' is not an array` };
-      // Use splitArgs so nested expressions like SnakeCords[n,1] inside
-      // an outer index don't get split on the inner comma.
-      const parts     = splitArgs(am[2].trim());
-      const evaluated = await Promise.all(parts.map(p => evalExpr(p.trim(), env, lineNum)));
-      const normIdx   = evaluated.join(',');
-      // Try the evaluated key first, then numeric coercion
-      let val = arr[normIdx];
-      if (val === undefined) {
-        const numKey = Number(normIdx);
-        if (!isNaN(numKey)) val = arr[numKey];
+      const idxStart = am[0].length - 1; // position of the '['
+      // Find matching ']' with bracket depth tracking
+      let depth = 0, idxEnd = -1;
+      for (let ci = idxStart; ci < expr.length; ci++) {
+        if (expr[ci] === '[') depth++;
+        else if (expr[ci] === ']') { depth--; if (depth === 0) { idxEnd = ci; break; } }
       }
-      if (val === undefined)
-        throw { message: `Error on Line ${lineNum}: Index [${normIdx}] out of bounds for '${aName}'` };
-      if (val === UNINITIALIZED)
-        throw { message: `Error on Line ${lineNum}: Array element '${aName}[${normIdx}]' has not been assigned` };
-      return val;
+      if (idxEnd === expr.length - 1) {
+        // The whole expression IS the array access
+        if (!Object.prototype.hasOwnProperty.call(env, aName))
+          throw { message: `Error on Line ${lineNum}: Array '${aName}' has not been declared` };
+        const arr = env[aName];
+        if (typeof arr !== 'object' || arr === null || arr === UNINITIALIZED)
+          throw { message: `Error on Line ${lineNum}: '${aName}' is not an array` };
+        const idxExpr    = expr.slice(idxStart + 1, idxEnd);
+        const parts      = splitArgs(idxExpr.trim());
+        const evaluated  = await Promise.all(parts.map(p => evalExpr(p.trim(), env, lineNum)));
+        const normIdx    = evaluated.join(',');
+        let val = arr[normIdx];
+        if (val === undefined) {
+          const numKey = Number(normIdx);
+          if (!isNaN(numKey)) val = arr[numKey];
+        }
+        if (val === undefined)
+          throw { message: `Error on Line ${lineNum}: Index [${normIdx}] out of bounds for '${aName}'` };
+        if (val === UNINITIALIZED)
+          throw { message: `Error on Line ${lineNum}: Array element '${aName}[${normIdx}]' has not been assigned` };
+        return val;
+      }
     }
   }
 
@@ -843,7 +863,7 @@ async function evalExpr(expr, env, lineNum) {
         case 'LEFT':      return String(args[0] ?? '').slice(0, +args[1]);
         case 'SUBSTRING': { const s = String(args[0] ?? ''); return s.slice(+args[1] - 1, (+args[1] - 1) + +args[2]); }
         case 'INT':       return Math.trunc(+args[0]);
-        case 'RAND':      return Math.random() * (+args[0] || 1);
+        case 'RAND':      return Math.floor(Math.random() * Math.abs(+args[0])) + 1;
         case 'RANDOM':    return Math.random();
         case 'ROUND':     return parseFloat((+args[0]).toFixed(args[1] != null ? +args[1] : 0));
         case 'ABS':       return Math.abs(+args[0]);
@@ -1081,6 +1101,12 @@ function validateAndParseInput(raw, typeName, varName, lineNum) {
       throw { message: `Error on Line ${lineNum}: '${varName}' is CHAR but got "${raw}" — enter a single character` };
     return charVal;
   }
+  if (t === 'DATE') {
+    const datePattern = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!datePattern.test(raw.trim()))
+      throw { message: `Error on Line ${lineNum}: '${varName}' is DATE but got "${raw}" — use dd/mm/yyyy format` };
+    return raw.trim();
+  }
   // STRING: any value
   return raw;
 }
@@ -1088,9 +1114,21 @@ function validateAndParseInput(raw, typeName, varName, lineNum) {
 // ── MAIN INTERPRETER ─────────────────────────────────────────
 // isTopLevel = true  →  run collectDefs and reset declaredTypes
 // isTopLevel = false →  sub-call (procedure body, IF block, loop body, etc.)
+//
+// ─── Loop-stack design ───────────────────────────────────────────────────────
+// FOR / WHILE / REPEAT loops no longer recurse into interpret() for each
+// iteration.  Instead, they push a frame onto `loopStack` and jump `i` into
+// the body.  NEXT / ENDWHILE / UNTIL peek at the top frame and either jump
+// back to the body start or pop the frame and continue past the loop.
+// This keeps the JS call-stack flat for any number of iterations and avoids
+// the microtask-chain overflow ("too much recursion") that browsers impose on
+// large sequences of chained Promises.
 async function interpret(lines, env, startIdx = 0, endIdx = null, isTopLevel = false) {
   let i         = startIdx;
   const end     = endIdx !== null ? endIdx : lines.length;
+
+  // Per-call loop stack (nested loops at the same syntactic level share it)
+  const loopStack = [];
 
   if (isTopLevel) {
     collectDefs(lines);
@@ -1104,6 +1142,17 @@ async function interpret(lines, env, startIdx = 0, endIdx = null, isTopLevel = f
     // Execution timeout — catches infinite loops and runaway recursion
     if (Date.now() > interpDeadline)
       throw { message: `Execution timed out after ${RUN_TIMEOUT_MS / 1000}s — check for infinite loops` };
+
+    // ── Periodic yield ────────────────────────────────────────────────────────
+    // Every YIELD_EVERY_N_STMTS statements we hand control back to the browser
+    // event loop via setTimeout.  This prevents microtask-chain overflows and
+    // keeps the UI responsive during large loops (e.g. 100 000 iterations).
+    if (++interpYieldCounter % YIELD_EVERY_N_STMTS === 0) {
+      await new Promise(r => setTimeout(r, 0));
+      // Re-check deadline after yielding (browser may have been busy)
+      if (Date.now() > interpDeadline)
+        throw { message: `Execution timed out after ${RUN_TIMEOUT_MS / 1000}s — check for infinite loops` };
+    }
 
     // Skip blank lines and comments
     if (!l || l.startsWith('//')) { i++; continue; }
@@ -1171,7 +1220,10 @@ async function interpret(lines, env, startIdx = 0, endIdx = null, isTopLevel = f
     // ── CONSTANT ─────────────────────────────────────────────
     if (/^CONSTANT\s+/.test(l)) {
       const m = l.match(/^CONSTANT\s+(\w+)\s*[\u2190=]\s*(.+)/);
-      if (m) env[m[1]] = await evalExpr(m[2].trim(), env, line.num);
+      if (m) {
+        env[m[1]] = await evalExpr(m[2].trim(), env, line.num);
+        interpConstants.add(m[1]);
+      }
       i++; continue;
     }
 
@@ -1217,6 +1269,10 @@ async function interpret(lines, env, startIdx = 0, endIdx = null, isTopLevel = f
       const ai = findArrowIdx(l);
       if (ai > 0 && !/^(IF|WHILE|UNTIL|FOR|REPEAT|CASE|DECLARE|CONSTANT|PROCEDURE|FUNCTION)\b/.test(l)) {
         const lhs = l.slice(0, ai).trim();
+        // Prevent reassignment of constants
+        const lhsVarName = lhs.replace(/\[.*\]$/, '');
+        if (interpConstants.has(lhsVarName))
+          throw { message: `Error on Line ${line.num}: Cannot reassign constant '${lhsVarName}'` };
         const rhs = l.slice(ai + 1).trim();
         const val = await evalExpr(rhs, env, line.num);
         await setVar(env, lhs, val, line.num);
@@ -1256,59 +1312,67 @@ async function interpret(lines, env, startIdx = 0, endIdx = null, isTopLevel = f
     }
 
     // ── FOR ──────────────────────────────────────────────────
+    // Push a frame onto loopStack and jump i into the body.
+    // NEXT (below) will handle iteration / exit.
     if (/^FOR\s+/.test(l)) {
-      const m = l.match(/^FOR\s+(\w+)\s*\u2190\s*(.+?)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/);
+      const m = l.match(/^FOR\s+(\w+)\s*[\u2190<=]\s*(.+?)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$/);
       if (m) {
         const [, v, fromE, toE, stepE] = m;
         const from = +await evalExpr(fromE, env, line.num);
         const to   = +await evalExpr(toE,   env, line.num);
         const step = stepE ? +await evalExpr(stepE, env, line.num) : 1;
+        // Locate the matching NEXT (depth-aware)
         let depth = 1, j = i + 1;
         while (j < end && depth > 0) {
           if (/^FOR\b/i.test(lines[j].text)) depth++;
           if (/^NEXT\b/i.test(lines[j].text)) depth--;
           j++;
         }
-        const nextJ = j - 1;
-        const ok    = step > 0 ? (v => v <= to) : (v => v >= to);
-        for (let val = from; ok(val); val += step) {
-          await setVar(env, v, val, line.num);
-          await interpret(lines, env, i + 1, nextJ);
+        const nextJ  = j - 1; // index of the NEXT line
+        const okCond = step > 0 ? (val => val <= to) : (val => val >= to);
+        if (okCond(from)) {
+          await setVar(env, v, from, line.num);
+          loopStack.push({ type: 'for', v, val: from, to, step, okCond, bodyStart: i + 1, nextJ, lineNum: line.num });
+          i = i + 1; // enter body
+        } else {
+          i = nextJ + 1; // condition false from start — skip body
         }
-        i = nextJ + 1; continue;
+        continue;
       }
     }
 
     // ── WHILE ────────────────────────────────────────────────
+    // Evaluate condition; if true push a frame and enter the body.
+    // ENDWHILE (below) will re-evaluate and loop back or exit.
     if (/^WHILE\s+/.test(l)) {
-      const cond = l.replace(/^WHILE\s+/, '').replace(/\s+DO\s*$/, '');
+      const condExpr = l.replace(/^WHILE\s+/, '').replace(/\s+DO\s*$/, '');
       let depth = 1, j = i + 1;
       while (j < end && depth > 0) {
         if (/^WHILE\b/i.test(lines[j].text)) depth++;
         if (/^ENDWHILE\b/i.test(lines[j].text)) depth--;
         j++;
       }
-      const endJ = j - 1;
-      while (await evalExpr(cond, env, line.num)) {
-        if (Date.now() > interpDeadline)
-          throw { message: `Execution timed out after ${RUN_TIMEOUT_MS / 1000}s — check for infinite loops` };
-        await interpret(lines, env, i + 1, endJ);
+      const endJ = j - 1; // index of the ENDWHILE line
+      const condVal = await evalExpr(condExpr, env, line.num);
+      if (condVal) {
+        loopStack.push({ type: 'while', condExpr, bodyStart: i + 1, endJ, lineNum: line.num });
+        i = i + 1; // enter body
+      } else {
+        i = endJ + 1; // skip body
       }
-      i = endJ + 1; continue;
+      continue;
     }
 
     // ── REPEAT ──────────────────────────────────────────────
+    // Push a frame and enter the body immediately (always runs at least once).
+    // UNTIL (below) checks the exit condition and loops back or exits.
     if (/^REPEAT$/.test(l)) {
       let j = i + 1;
       while (j < end && !/^UNTIL\b/i.test(lines[j].text)) j++;
-      const untilJ = j;
-      const cond   = normalizeArrows(lines[untilJ].text.replace(/^UNTIL\s+/i, ''));
-      do {
-        if (Date.now() > interpDeadline)
-          throw { message: `Execution timed out after ${RUN_TIMEOUT_MS / 1000}s — check for infinite loops` };
-        await interpret(lines, env, i + 1, untilJ);
-      } while (!await evalExpr(cond, env, lines[untilJ].num));
-      i = untilJ + 1; continue;
+      const untilJ = j; // index of the UNTIL line
+      loopStack.push({ type: 'repeat', bodyStart: i + 1, untilJ });
+      i = i + 1; // enter body
+      continue;
     }
 
     // ── CASE OF ─────────────────────────────────────────────
@@ -1413,21 +1477,124 @@ async function interpret(lines, env, startIdx = 0, endIdx = null, isTopLevel = f
       i++; continue;
     }
 
+    // ── NEXT ─────────────────────────────────────────────────
+    // Advance the loop variable; jump back to body or exit.
+    if (/^NEXT\b/.test(l)) {
+      const frame = loopStack.length > 0 ? loopStack[loopStack.length - 1] : null;
+      if (frame && frame.type === 'for') {
+        frame.val += frame.step;
+        if (frame.okCond(frame.val)) {
+          await setVar(env, frame.v, frame.val, frame.lineNum);
+          i = frame.bodyStart; // jump back to first line of body
+        } else {
+          loopStack.pop();
+          i = frame.nextJ + 1; // past the NEXT line
+        }
+      } else {
+        i++; // unmatched NEXT — skip (shouldn't happen in valid pseudocode)
+      }
+      continue;
+    }
+
+    // ── ENDWHILE ─────────────────────────────────────────────
+    // Re-evaluate the WHILE condition; loop back or exit.
+    if (/^ENDWHILE\b/.test(l)) {
+      const frame = loopStack.length > 0 ? loopStack[loopStack.length - 1] : null;
+      if (frame && frame.type === 'while') {
+        const condVal = await evalExpr(frame.condExpr, env, frame.lineNum);
+        if (condVal) {
+          i = frame.bodyStart; // loop back
+        } else {
+          loopStack.pop();
+          i = frame.endJ + 1; // past ENDWHILE
+        }
+      } else {
+        i++;
+      }
+      continue;
+    }
+
+    // ── UNTIL ────────────────────────────────────────────────
+    // Evaluate the exit condition; repeat or exit.
+    if (/^UNTIL\b/.test(l)) {
+      const frame = loopStack.length > 0 ? loopStack[loopStack.length - 1] : null;
+      if (frame && frame.type === 'repeat') {
+        // `l` is already normalizeArrows'd
+        const untilCond = l.replace(/^UNTIL\s+/i, '');
+        const condVal   = await evalExpr(untilCond, env, line.num);
+        if (!condVal) {
+          i = frame.bodyStart; // loop again
+        } else {
+          loopStack.pop();
+          i = frame.untilJ + 1; // past UNTIL
+        }
+      } else {
+        i++;
+      }
+      continue;
+    }
+
     // ── Structural markers consumed by parent ────────────────
-    if (/^(ENDIF|ELSE|NEXT|ENDWHILE|UNTIL|ENDCASE|OTHERWISE|THEN)\b/.test(l)) { i++; continue; }
+    if (/^(ENDIF|ELSE|ENDCASE|OTHERWISE|THEN)\b/.test(l)) { i++; continue; }
 
     // ── Unrecognised statement → error ───────────────────────
+    const firstWord = l.match(/^(\w+)/);
+    if (firstWord) {
+      const fw = firstWord[1].toUpperCase();
+      if (['DEFINE','SET','TYPE','ENDTYPE','CLASS','ENDCLASS','INHERITS','SUPER','NEW','PUBLIC','PRIVATE','GETRECORD','PUTRECORD'].includes(fw))
+        throw { message: `Error on Line ${line.num}: Keyword '${firstWord[1]}' is recognised but not implemented in this IDE` };
+    }
     throw { message: `Error on Line ${line.num}: Unrecognised statement: "${line.orig.trim()}"` };
   }
 }
 
+// ── Track constants to enforce immutability ─────────────────
+let interpConstants = new Set();
+
+// ── Lowercase keyword detection & fix ───────────────────────
+
+function detectLowercaseKeywords(code) {
+  const lines = code.split('\n');
+  for (const line of lines) {
+    const commentIdx = line.indexOf('//');
+    const codePart = commentIdx === -1 ? line : line.slice(0, commentIdx);
+    const tokens = tokenizeLine(codePart);
+    for (const tok of tokens) {
+      if ((tok.type === 'keyword' || tok.type === 'type' || tok.type === 'bool') && tok.val !== tok.val.toUpperCase()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function fixLowercaseKeywords(code) {
+  const lines = code.split('\n');
+  return lines.map(line => {
+    const commentIdx = line.indexOf('//');
+    const codePart = commentIdx === -1 ? line : line.slice(0, commentIdx);
+    const commentPart = commentIdx !== -1 ? line.slice(commentIdx) : '';
+    const tokens = tokenizeLine(codePart);
+    let result = '';
+    for (const tok of tokens) {
+      if ((tok.type === 'keyword' || tok.type === 'type' || tok.type === 'bool') && tok.val !== tok.val.toUpperCase()) {
+        result += tok.val.toUpperCase();
+      } else {
+        result += tok.val;
+      }
+    }
+    return result + commentPart;
+  }).join('\n');
+}
+
 // ── RUN ──────────────────────────────────────────────────────
-async function runCode() {
+async function _doRun() {
   if (isRunning) return;
   consoleClear();
   consoleLog('\u25b6 Running program\u2026', 'info');
-  interpTraceRows = []; traceColOrder = []; _traceCurrent = null; interpEnv = {};
+  interpTraceRows = []; traceColOrder = []; _traceCurrent = null; interpEnv = {}; interpConstants = new Set();
   isRunning = true;
+  interpYieldCounter = 0;
   interpDeadline = Date.now() + RUN_TIMEOUT_MS;
   document.getElementById('btn-run').disabled = true;
   switchRightTab('console');
@@ -1443,6 +1610,19 @@ async function runCode() {
   document.getElementById('btn-run').disabled = false;
   finaliseTrace();
   buildTraceTable();
+}
+
+async function runCode() {
+  if (isRunning) return;
+
+  // Check for lowercase keywords
+  if (detectLowercaseKeywords(codeInput.value)) {
+    const overlay = document.getElementById('case-fix-overlay');
+    overlay.classList.add('visible');
+    return;
+  }
+
+  await _doRun();
 }
 
 // ── STEP ─────────────────────────────────────────────────────
@@ -1475,7 +1655,7 @@ function endStepMode() {
 
 function resetExecution() {
   isRunning = false; endStepMode();
-  interpEnv = {}; interpTraceRows = []; traceColOrder = []; _traceCurrent = null; interpProcedures = {}; interpFunctions = {};
+  interpEnv = {}; interpTraceRows = []; traceColOrder = []; _traceCurrent = null; interpProcedures = {}; interpFunctions = {}; interpConstants = new Set();
   interpDeadline = Infinity;
   document.getElementById('input-modal-overlay').classList.remove('visible');
   consoleClear();
@@ -1502,16 +1682,25 @@ function buildTraceTable() {
     const hasOutputs = row.outputs.length > 0;
     if (!hasVars && !hasOutputs) continue;
 
-    html += `<tr><td>${row.line}</td>`;
-    vars.forEach(v => {
-      if (Object.prototype.hasOwnProperty.call(row.vars, v)) {
-        html += `<td style="color:var(--green);font-weight:600">${escHtml(row.vars[v])}</td>`;
+    const outputCount = Math.max(1, row.outputs.length);
+    for (let oi = 0; oi < outputCount; oi++) {
+      html += `<tr>`;
+      if (oi === 0) {
+        html += `<td>${row.line}</td>`;
+        vars.forEach(v => {
+          if (Object.prototype.hasOwnProperty.call(row.vars, v)) {
+            html += `<td style="color:var(--green);font-weight:600">${escHtml(row.vars[v])}</td>`;
+          } else {
+            html += '<td></td>';
+          }
+        });
       } else {
-        html += '<td></td>';
+        html += `<td></td>`;
+        vars.forEach(() => { html += '<td></td>'; });
       }
-    });
-    const outStr = row.outputs.length ? row.outputs.join(' │ ') : '';
-    html += `<td style="color:var(--cyan)">${escHtml(outStr)}</td></tr>`;
+      const outVal = row.outputs[oi] || '';
+      html += `<td style="color:var(--cyan)">${escHtml(outVal)}</td></tr>`;
+    }
   }
 
   html += '</tbody></table>';
@@ -1742,8 +1931,17 @@ function switchSidebar(panel) {
   }
 }
 
+let snippetTooltipTimeout;
+
 function buildSnippets() {
   const list = document.getElementById('snippets-list');
+  const tooltip = document.getElementById('snippet-tooltip');
+  const sidebarPanel = document.getElementById('sidebar-panel');
+  if (!tooltip.dataset.hoverInit) {
+    tooltip.dataset.hoverInit = '1';
+    tooltip.addEventListener('mouseenter', () => clearTimeout(snippetTooltipTimeout));
+    tooltip.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  }
   list.innerHTML = '';
   SNIPPETS.forEach(cat => {
     const catEl = document.createElement('div');
@@ -1756,9 +1954,33 @@ function buildSnippets() {
       el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>${escHtml(item.name)}`;
       el.title = `Insert: ${item.name}`;
       el.addEventListener('click', () => insertSnippet(item.code));
+      const highlighted = highlight(item.code);
+      el.addEventListener('mouseenter', e => {
+        clearTimeout(snippetTooltipTimeout);
+        tooltip.innerHTML = `<div class="tt-name">${escHtml(item.name)}</div><pre>${highlighted}</pre>`;
+        tooltip.style.display = 'block';
+        positionSnippetTooltip(e, tooltip, sidebarPanel);
+      });
+      el.addEventListener('mousemove', e => {
+        positionSnippetTooltip(e, tooltip, sidebarPanel);
+      });
+      el.addEventListener('mouseleave', () => {
+        snippetTooltipTimeout = setTimeout(() => {
+          tooltip.style.display = 'none';
+        }, 150);
+      });
       list.appendChild(el);
     });
   });
+}
+
+function positionSnippetTooltip(e, tooltip, sidebarPanel) {
+  const sr = sidebarPanel.getBoundingClientRect();
+  const tx = sr.right + 8;
+  let ty = e.clientY - tooltip.offsetHeight / 2;
+  ty = Math.max(8, Math.min(window.innerHeight - tooltip.offsetHeight - 8, ty));
+  tooltip.style.left = tx + 'px';
+  tooltip.style.top = ty + 'px';
 }
 
 function insertSnippet(code) {
@@ -1785,6 +2007,7 @@ function changeFontSize(size) {
 }
 function toggleAutoSave(val)    { autoSaveEnabled = val; }
 function toggleLinter(val)      { linterEnabled = val; if (!val) document.getElementById('linter-badge').innerHTML = ''; }
+function toggleEnforceDeclare(val) { enforceDeclareEnabled = val; }
 function toggleLineNumbers(val) { lineNumbersEnabled = val; lineNumbers.style.display = val ? 'block' : 'none'; updateEditor(); }
 function toggleLightMode(val)   { document.body.classList.toggle('light-mode', val); }
 
@@ -1845,7 +2068,22 @@ OUTPUT "Grade: ", Grade`;
   document.addEventListener('keydown', e => {
     if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); runCode(); }
     if (e.ctrlKey && e.key === 's') { e.preventDefault(); manualSave(); }
-    if (e.key === 'Escape') document.getElementById('input-modal-overlay').classList.remove('visible');
+    if (e.key === 'Escape') {
+      document.getElementById('input-modal-overlay').classList.remove('visible');
+      document.getElementById('case-fix-overlay').classList.remove('visible');
+    }
+  });
+
+  // ── Case-fix modal buttons ──────────────────────────────────
+  document.getElementById('case-fix-yes').addEventListener('click', () => {
+    document.getElementById('case-fix-overlay').classList.remove('visible');
+    codeInput.value = fixLowercaseKeywords(codeInput.value);
+    updateEditor();
+    _doRun();
+  });
+  document.getElementById('case-fix-no').addEventListener('click', () => {
+    document.getElementById('case-fix-overlay').classList.remove('visible');
+    _doRun();
   });
 
   // ── Resizable right panel ─────────────────────────────────────
