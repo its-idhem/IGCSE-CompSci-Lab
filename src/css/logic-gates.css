@@ -1,63 +1,59 @@
-/* CIE Logic Gates — logic-gates.css */
-
-/* ── THEME VARIABLES ──────────────────────────────────────── */
 :root {
-  --bg-main:       #0d0d12;
-  --bg-panel:      #131318;
-  --bg-editor:     #0f0f15;
-  --bg-sidebar:    #0a0a0f;
-  --bg-hover:      #1a1a24;
-  --bg-active:     #1e1e2e;
-  --accent:        #67e8f9;
-  --accent-dim:    rgba(103,232,249,0.15);
-  --accent-glow:   rgba(103,232,249,0.15);
-  --green:         #22c55e;
-  --green-dim:     rgba(34,197,94,0.15);
-  --red:           #f87171;
-  --yellow:        #fbbf24;
-  --cyan:          #67e8f9;
-  --text-primary:  #e2e8f0;
-  --text-secondary:#94a3b8;
-  --text-muted:    #475569;
-  --border:        rgba(148,163,184,0.08);
-  --border-bright: rgba(103,232,249,0.2);
-  --scrollbar:     rgba(0,180,200,0.2);
+  --bg-main:       #1A1512;
+  --bg-panel:      #231E1A;
+  --bg-editor:     #1E1916;
+  --bg-sidebar:    #1A1512;
+  --bg-hover:      #2A2420;
+  --bg-active:     #332C27;
+  --accent:        #7A9BAA;
+  --accent-dim:    rgba(122,155,170,0.12);
+  --accent-glow:   rgba(122,155,170,0.15);
+  --green:         #8BA87A;
+  --green-dim:     rgba(139,168,122,0.15);
+  --red:           #C06060;
+  --yellow:        #C4A040;
+  --cyan:          #7A9BAA;
+  --text-primary:  #E8E0D4;
+  --text-secondary:#9A8E7E;
+  --text-muted:    #6B6258;
+  --border:        rgba(154,142,126,0.1);
+  --border-bright: rgba(122,155,170,0.2);
+  --scrollbar:     rgba(122,155,170,0.15);
   --font-mono:     'JetBrains Mono','Fira Code',monospace;
-  --font-ui:       'Outfit',sans-serif;
+  --font-ui:       'Inter',-apple-system,sans-serif;
   --radius:        6px;
   --transition:    0.15s cubic-bezier(0.4,0,0.2,1);
-  --wire-dead:     #0e7490;
-  --wire-live:     #22c55e;
-  --canvas-grid:   rgba(148,163,184,0.06);
+  --wire-dead:     #4A6A7A;
+  --wire-live:     #8BA87A;
+  --canvas-grid:   rgba(154,142,126,0.06);
 }
 
 body.light-mode {
-  --bg-main:       #f8fafc;
-  --bg-panel:      #f0f0f5;
-  --bg-editor:     #ffffff;
-  --bg-sidebar:    #e8e8f0;
-  --bg-hover:      #e0f9fc;   /* cyan-tinted hover */
-  --bg-active:     #cff3f8;
-  --accent:        #0891b2;
-  --accent-dim:    rgba(8,145,178,0.12);
-  --accent-glow:   rgba(8,145,178,0.15);
-  --green:         #15803d;
-  --green-dim:     rgba(21,128,61,0.12);
-  --red:           #dc2626;
-  --yellow:        #b45309;
-  --cyan:          #0369a1;
-  --text-primary:  #1e1b2e;
-  --text-secondary:#4a4a6a;
-  --text-muted:    #7a7a9a;
-  --border:        rgba(0,0,0,0.08);
-  --border-bright: rgba(8,145,178,0.25);
-  --scrollbar:     rgba(0,0,0,0.12);
-  --wire-dead:     #0891b2;
-  --wire-live:     #15803d;
-  --canvas-grid:   rgba(0,0,50,0.05);
+  --bg-main:       #FDF8F0;
+  --bg-panel:      #F5F0E6;
+  --bg-editor:     #FFFFFF;
+  --bg-sidebar:    #F0EBE0;
+  --bg-hover:      #E8F4F0;
+  --bg-active:     #D0E8E0;
+  --accent:        #4A7A8A;
+  --accent-dim:    rgba(74,122,138,0.1);
+  --accent-glow:   rgba(74,122,138,0.12);
+  --green:         #5A7A4A;
+  --green-dim:     rgba(90,122,74,0.1);
+  --red:           #A04040;
+  --yellow:        #8A7A2A;
+  --cyan:          #4A7A8A;
+  --text-primary:  #2A2420;
+  --text-secondary:#5A524A;
+  --text-muted:    #8A827A;
+  --border:        rgba(42,36,32,0.08);
+  --border-bright: rgba(74,122,138,0.2);
+  --scrollbar:     rgba(42,36,32,0.1);
+  --wire-dead:     #4A7A8A;
+  --wire-live:     #5A7A4A;
+  --canvas-grid:   rgba(42,36,32,0.04);
 }
 
-/* ── RESET ─────────────────────────────────────────────────── */
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 ::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -68,7 +64,6 @@ html,body {
   font-family:var(--font-ui); overflow:hidden; font-size:14px; user-select:none;
 }
 
-/* ── TITLEBAR ─────────────────────────────────────────────── */
 #titlebar {
   position:fixed; top:0; left:0; right:0; height:38px;
   background:var(--bg-sidebar); border-bottom:1px solid var(--border);
@@ -97,11 +92,9 @@ html,body {
 .title-btn svg { width:12px; height:12px; }
 #btn-theme { font-size:14px; padding:4px 10px; }
 
-/* ── LAYOUT ─────────────────────────────────────────────────── */
 #app { display:flex; flex-direction:column; height:100vh; padding-top:38px; }
 #workspace { display:flex; flex:1; overflow:hidden; }
 
-/* ── LEFT SIDEBAR ─────────────────────────────────────────── */
 #left-sidebar {
   width:190px; flex-shrink:0; background:var(--bg-panel);
   border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden;
@@ -130,13 +123,11 @@ html,body {
 .comp-item:hover {
   background:var(--bg-hover); color:var(--text-primary); border-color:var(--border-bright);
 }
-/* Light mode: purple hover */
 body.light-mode .comp-item:hover {
-  background:rgba(8,145,178,0.12); border-color:var(--accent); color:var(--accent);
+  background:rgba(74,122,138,0.1); border-color:var(--accent); color:var(--accent);
 }
 .comp-item:active { cursor:grabbing; }
 
-/* ── GLOBAL TOOLTIP (JS-positioned, appended to body) ─────── */
 #global-tooltip {
   display:none;
   position:fixed; z-index:9999; pointer-events:none;
@@ -151,7 +142,6 @@ body.light-mode .comp-item:hover {
 .mini-tt .tt-one  { color:var(--green); font-weight:700; }
 .mini-tt .tt-zero { color:var(--text-muted); }
 
-/* ── CENTER CANVAS ─────────────────────────────────────────── */
 #canvas-wrapper {
   flex:1; overflow:scroll; background:var(--bg-main);
   position:relative;
@@ -159,14 +149,10 @@ body.light-mode .comp-item:hover {
 #canvas-wrapper::-webkit-scrollbar { width:8px; height:8px; }
 #canvas-wrapper::-webkit-scrollbar-thumb { background:var(--scrollbar); border-radius:4px; }
 
-/* ── ZOOM CONTROLS (fixed to viewport bottom-right of canvas area) ── */
-/* position:fixed keeps the buttons locked to the screen on BOTH axes.
-   The `right` value is set initially here and updated via JS whenever
-   the right sidebar is resized.                                        */
 #zoom-controls {
   position: fixed;
-  bottom: 44px;      /* 32px expression-bar + 12px gap              */
-  right: 272px;      /* 260px default sidebar width + 12px gap       */
+  bottom: 44px;
+  right: 272px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -182,18 +168,15 @@ body.light-mode .comp-item:hover {
   display:flex; align-items:center; justify-content:center;
   transition:var(--transition); box-shadow:0 2px 8px rgba(0,0,0,0.3);
 }
-.zoom-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+.zoom-btn:hover { background:var(--accent); color:var(--bg-base); border-color:var(--accent); }
 .zoom-label { font-size:10px !important; cursor:default !important; pointer-events:none; }
 
-/* ── SELECTION RECT ─────────────────────────────────────────── */
 .sel-rect-style {
   fill:var(--accent-dim); stroke:var(--accent);
   stroke-width:1; stroke-dasharray:5 3; pointer-events:none;
 }
 
-/* ── SVG COMPONENT STYLES ─────────────────────────────────── */
 .comp-group { cursor:move; }
-/* Gate outlines — no fill, CSS-driven stroke color */
 .comp-body {
   fill:none; stroke:var(--text-secondary); stroke-width:1.5; stroke-linejoin:round;
   transition:stroke var(--transition);
@@ -217,12 +200,10 @@ body.light-mode .comp-item:hover {
   pointer-events:none; dominant-baseline:central; text-anchor:middle;
 }
 
-/* ── INPUT TOGGLE ─────────────────────────────────────────── */
 .input-body { stroke-width:1.5; transition:fill var(--transition),stroke var(--transition); rx:6; }
 .input-body.off { fill:var(--bg-editor); stroke:var(--text-secondary); }
 .input-body.on  { fill:var(--accent);    stroke:var(--accent); }
 
-/* Label text — CSS controls fill, NO inline style override */
 .input-label-text {
   fill:var(--text-primary);
   font-family:var(--font-mono); font-size:12px; font-weight:700;
@@ -233,11 +214,9 @@ body.light-mode .comp-item:hover {
   font-family:var(--font-mono); font-size:14px; font-weight:700;
   dominant-baseline:central; text-anchor:middle; pointer-events:none;
 }
-/* When input is ON, flip both texts to white via group class */
 .comp-group.input-on .input-label-text { fill:#ffffff; }
 .comp-group.input-on .input-value-text  { fill:#ffffff; }
 
-/* Inline label edit input */
 .label-fo { overflow:visible; }
 .label-input {
   background:var(--bg-active); border:1px solid var(--accent);
@@ -247,7 +226,6 @@ body.light-mode .comp-item:hover {
   width:100%; height:100%;
 }
 
-/* ── OUTPUT BULB ──────────────────────────────────────────── */
 .output-glow { transition:fill-opacity var(--transition); }
 .output-body  { stroke-width:1.5; transition:fill var(--transition),stroke var(--transition); }
 .output-body.off { fill:var(--bg-editor); stroke:var(--text-secondary); }
@@ -264,7 +242,6 @@ body.light-mode .comp-item:hover {
   font-size:11px; dominant-baseline:central; text-anchor:middle; cursor:text;
 }
 
-/* ── COMMENT BOX ──────────────────────────────────────────── */
 .comment-body { fill:var(--bg-active); stroke:var(--border-bright); stroke-width:1; stroke-dasharray:5 3; }
 .comment-editable {
   width:100%; height:100%; font-size:11px; color:var(--text-muted);
@@ -273,15 +250,12 @@ body.light-mode .comp-item:hover {
 }
 .comment-resize { fill:var(--accent); opacity:0.45; cursor:nwse-resize; }
 .comment-resize:hover { opacity:1; }
-/* Comment group uses move cursor on the border rect, text cursor inside */
 .comp-group.comment-group { cursor:move; }
 
-/* ── PORT CIRCLES ─────────────────────────────────────────── */
 .port-circle { stroke-width:1.5; cursor:crosshair; }
 .port-in  { fill:var(--bg-editor); stroke:var(--text-muted); }
 .port-out { fill:var(--bg-editor); stroke:var(--accent); }
 
-/* ── WIRES ────────────────────────────────────────────────── */
 .wire-path { fill:none; stroke-width:2; stroke-linecap:round; cursor:pointer; }
 .wire-path.selected { stroke-width:3; }
 .wire-path:hover    { stroke-width:3; }
@@ -289,14 +263,12 @@ body.light-mode .comp-item:hover {
 .wire-live { stroke:var(--wire-live); }
 #temp-wire { fill:none; stroke:var(--accent); stroke-width:2; stroke-dasharray:6 4; pointer-events:none; }
 
-/* ── RIGHT SIDEBAR (resizable) ─────────────────────────────── */
 #right-sidebar {
   width:260px; min-width:140px; max-width:600px;
   background:var(--bg-panel);
   border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden;
 }
 
-/* ── SIDEBAR RESIZE HANDLE ──────────────────────────────────── */
 #sidebar-resizer {
   width: 5px; flex-shrink:0; cursor:col-resize;
   background:transparent; transition:background var(--transition);
@@ -322,7 +294,6 @@ body.light-mode .comp-item:hover {
 .truth-table .tt-zero { color:var(--text-muted); }
 .truth-table .tt-active td { background:var(--accent-dim); }
 
-/* ── EXPRESSION BAR ─────────────────────────────────────────── */
 #expression-bar {
   height:32px; flex-shrink:0; background:var(--bg-sidebar);
   border-top:1px solid var(--border);
@@ -332,7 +303,6 @@ body.light-mode .comp-item:hover {
   font-size:10px; font-weight:600; text-transform:uppercase;
   letter-spacing:1.2px; color:var(--accent); white-space:nowrap; flex-shrink:0;
 }
-/* Wrapper makes the expression + copy button act as one hover target */
 #expression-wrap {
   flex:1; display:flex; align-items:center; gap:6px;
   min-width:0; overflow:hidden; cursor:pointer;
@@ -349,16 +319,13 @@ body.light-mode .comp-item:hover {
 }
 #copy-expr-btn:hover { background:var(--accent-dim); }
 #expression-wrap:hover #copy-expr-btn { opacity:1; }
-/* Flash green on successful copy */
 #copy-expr-btn.copied { color:var(--green); opacity:1; }
-/* Attribution — bottom-right of expression bar */
 #attr-link {
   color:var(--accent); text-decoration:none; font-size:10px;
   opacity:0.6; transition:opacity var(--transition); white-space:nowrap; flex-shrink:0;
 }
 #attr-link:hover { opacity:1; }
 
-/* ── GLOBAL TOOLTIP (fixed to viewport) ──────────────────── */
 #global-tooltip {
   display:none;
   position:fixed;
@@ -370,17 +337,12 @@ body.light-mode .comp-item:hover {
   pointer-events:none;
   box-shadow:0 8px 32px rgba(0,0,0,0.4);
 }
-/* ═══════════════════════════════════════════════════════════════
-   MOBILE / TOUCH SUPPORT
-   ═══════════════════════════════════════════════════════════════ */
 
-/* ── TOUCH RESETS ─────────────────────────────────────────────── */
 * { -webkit-tap-highlight-color: transparent; }
 #canvas-wrapper { touch-action: none; }
 .port-circle, .comp-group { touch-action: none; }
 #canvas { touch-action: none; }
 
-/* ── PLACE-MODE HINT BAR ──────────────────────────────────────── */
 #place-hint {
   display: none;
   position: fixed;
@@ -388,20 +350,21 @@ body.light-mode .comp-item:hover {
   left: 50%;
   transform: translateX(-50%);
   background: var(--accent);
-  color: #000c10;
+  color: var(--bg-base);
   font-size: 12px;
   font-weight: 700;
   font-family: var(--font-ui);
   padding: 6px 18px;
   border-radius: 20px;
   z-index: 500;
-  pointer-events: none;
+  pointer-events: all;
   white-space: nowrap;
-  box-shadow: 0 2px 12px rgba(103,232,249,0.4);
+  box-shadow: 0 2px 12px rgba(122,155,170,0.4);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
-#place-hint.visible { display: block; }
+#place-hint.visible { display: block; opacity: 1; }
 
-/* ── MOBILE BACKDROP ─────────────────────────────────────────── */
 #mobile-backdrop {
   display: none;
   position: fixed;
@@ -413,7 +376,6 @@ body.light-mode .comp-item:hover {
 }
 #mobile-backdrop.visible { display: block; }
 
-/* ── MOBILE NAV (injected by JS) ─────────────────────────────── */
 #mobile-nav {
   display: none;
   position: fixed;
@@ -454,7 +416,6 @@ body.light-mode .comp-item:hover {
 }
 .mobile-nav-btn:active { opacity: 0.7; }
 
-/* Drag handle pill on bottom sheets */
 .sidebar-drag-handle {
   display: none;
   width: 36px; height: 4px;
@@ -464,21 +425,17 @@ body.light-mode .comp-item:hover {
   flex-shrink: 0;
 }
 
-/* ── TABLET (≤ 900px) ─────────────────────────────────────────── */
 @media (max-width: 900px) {
   #left-sidebar  { width: 160px; }
   #right-sidebar { width: 200px; }
   .title-center  { display: none; }
 }
 
-/* ── MOBILE (≤ 640px) ─────────────────────────────────────────── */
 @media (max-width: 640px) {
-  /* Titlebar: keep logo + critical actions, hide text labels */
   .title-center { display: none; }
-  .title-btn-label { display: none; } /* added by JS to Export/Clear text */
+  .title-btn-label { display: none; }
   #attr-link { display: none; }
 
-  /* Sidebars become slide-up bottom sheets */
   #left-sidebar, #right-sidebar {
     position: fixed !important;
     bottom: 0; left: 0; right: 0;
@@ -501,56 +458,55 @@ body.light-mode .comp-item:hover {
     transform: translateY(0);
   }
 
-  /* Drag handle visible on mobile */
   .sidebar-drag-handle { display: block; margin: 8px auto 0; }
 
-  /* Sidebar header adjustments for mobile */
   .sidebar-header {
     padding: 6px 16px 8px;
     display: flex; align-items: center; justify-content: space-between;
   }
 
-  /* Canvas takes full width, no sidebars inline */
   #workspace { position: relative; }
   #sidebar-resizer { display: none; }
 
-  /* Canvas area — full height minus titlebar and expression bar */
   #canvas-wrapper { flex: 1; }
 
-  /* Mobile nav bar visible */
   #mobile-nav { display: flex; }
 
-  /* Expression bar: compact */
   #expression-bar { padding: 0 10px; gap: 6px; height: 34px; }
   .expr-label { display: none; }
   #expression-text { font-size: 11px; }
 
-  /* Zoom controls: anchored to bottom-right of canvas */
   #zoom-controls {
     right: 12px !important;
     bottom: 42px;
   }
 
-  /* Larger touch targets for ports (scale up visually) */
   .port-circle { r: 7; }
-  /* Compensate with CSS transform so layout doesn't shift */
   .port-in, .port-out { transform-box: fill-box; transform-origin: center; }
 
-  /* Title buttons — icon only on very small screens */
   #btn-export .export-label,
   #btn-clear  .clear-label  { display: none; }
 
-  /* Component items slightly taller for easier tapping */
   .comp-item { padding: 8px 6px; }
 
-  /* Truth table: scrollable with slightly smaller font */
   #truth-table-container { overflow: auto; }
   .truth-table { font-size: 11px; }
   .truth-table th, .truth-table td { padding: 5px 8px; }
 }
 
-/* Extra small phones */
 @media (max-width: 400px) {
   .title-btn { padding: 3px 6px; font-size: 10px; }
   #titlebar { gap: 8px; padding: 0 8px; }
+}
+
+@keyframes port-pulse {
+  0%   { r: 5;  opacity: 1; }
+  50%  { r: 9;  opacity: 0.6; }
+  100% { r: 5;  opacity: 1; }
+}
+.port-pending {
+  stroke: var(--accent) !important;
+  fill:   var(--accent) !important;
+  animation: port-pulse 0.9s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px var(--accent));
 }
