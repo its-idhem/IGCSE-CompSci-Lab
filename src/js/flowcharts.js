@@ -64,8 +64,11 @@ function measureTextPx(str) {
 
 function getFullLabel(sym) {
   const def = DEFS[sym.type];
-  if (def.prefix) return def.prefix + ' ' + (sym.text || '');
-  return sym.text || defaultText(sym.type);
+  let label;
+  if (def.prefix) label = def.prefix + ' ' + (sym.text || '');
+  else label = sym.text || defaultText(sym.type);
+  if (sym.type === 'DECISION') label = label + ' ?';
+  return label;
 }
 
 function computeSymDims(type, fullLabel) {
@@ -114,7 +117,10 @@ let symDrag  = null;
 let panDrag  = null;
 let marqDrag = null;
 let commentResize = null;  // {id, ox, oy, ow, oh}
+let connSegDrag = null; // {connId, ptIndex, startX, startY, origX, origY}
 let _marqDidSelect = false; // prevents svg click from wiping marquee selection
+let _lastTapTime = 0; // double-tap detection on touch
+let _lastTapSymId = null;
 
 // ── DOM refs ──────────────────────────────────────────────
 const wrap        = document.getElementById('canvas-wrapper');
@@ -153,6 +159,12 @@ function positionZoomControls() {
   const zc  = document.getElementById('zoom-controls');
   const obp = document.getElementById('btn-open-panel');
   if (!zc) return;
+  if (window.innerWidth <= 640) {
+    zc.style.right  = '12px';
+    zc.style.bottom = '52px';
+    if (obp) obp.style.display = 'none';
+    return;
+  }
   if (rightPanel.classList.contains('rp-collapsed')) {
     zc.style.right  = '16px';
     if (obp) obp.style.display = 'block';
@@ -174,6 +186,16 @@ function renderAll() {
   connections.forEach(renderConn);
   symbols.forEach(renderSym);
   updatePseudocode();
+}
+
+function _syncSelectionClasses() {
+  nodesG.querySelectorAll('.node-group').forEach(function(g) {
+    var id = g.getAttribute('data-id');
+    g.classList.toggle('selected', selId === id || selSet.has(id));
+  });
+  connsG.querySelectorAll('.conn-group').forEach(function(g) {
+    g.classList.toggle('selected', g.getAttribute('data-conn-id') === selId);
+  });
 }
 
 function renderSym(sym) {
@@ -294,6 +316,40 @@ function renderSym(sym) {
         document.addEventListener('mousemove', onWireMove);
         document.addEventListener('mouseup',   onWireUp);
       });
+      // Touch: tap port to enter pending-wire mode; or complete a pending wire
+      hit.addEventListener('touchstart', function(e){
+        e.stopPropagation(); e.preventDefault();
+        touchPanMob = null;
+        if(pendingWireMob){
+          // This port is the target — connect and done
+          addConnection(pendingWireMob.fromId, pendingWireMob.fromPort, fromId, fromPort);
+          cancelPendingWireMob();
+          return;
+        }
+        // Start a wire drag; touchend decides tap vs drag
+        wireDrag = {fromId, fromPort};
+        touchWireStartMob = {clientX: e.touches[0].clientX, clientY: e.touches[0].clientY};
+        tempConn.setAttribute('visibility','visible');
+        tempConn.setAttribute('d','M'+fpPos.x+','+fpPos.y+' L'+fpPos.x+','+fpPos.y);
+      }, {passive:false});
+      hit.addEventListener('touchend', function(e){
+        e.stopPropagation();
+        if(!wireDrag || !touchWireStartMob) return;
+        const touch = e.changedTouches[0];
+        const moved = Math.abs(touch.clientX - touchWireStartMob.clientX) > 18 ||
+                      Math.abs(touch.clientY - touchWireStartMob.clientY) > 18;
+        touchWireStartMob = null;
+        if(!moved){
+          // Tap → pending mode
+          const srcSym = symbols.find(function(s){return s.id===fromId;});
+          const fp = srcSym ? portPos(srcSym, fromPort) : fpPos;
+          wireDrag = null;
+          tempConn.setAttribute('visibility','hidden');
+          setPendingWireMob({fromId, fromPort, fp});
+          e.preventDefault();
+        }
+        // else: global touchend resolves the drag-wire
+      }, {passive:false});
     })(sym.id, pname, portPos(sym, pname));
 
     g.appendChild(hit);
@@ -310,7 +366,7 @@ function renderSym(sym) {
       // FIX I: Shift+click toggles membership in selSet
       if (selSet.has(sym.id)) selSet.delete(sym.id);
       else { selSet.add(sym.id); selId = null; }
-      renderAll();
+      _syncSelectionClasses();
       return;
     }
 
@@ -326,14 +382,31 @@ function renderSym(sym) {
       if (s) origPositions[id]={x:s.x,y:s.y};
     });
 
-    symDrag = { id:sym.id, startX:sp.x, startY:sp.y, origPositions };
+    symDrag = { id:sym.id, startX:sp.x, startY:sp.y, origPositions, moved:false };
     document.addEventListener('mousemove', onSymMove);
     document.addEventListener('mouseup',   onSymUp);
-    renderAll();
+    _syncSelectionClasses();
   });
 
   // dblclick and contextmenu handled via delegation on nodesG (see below)
   nodesG.appendChild(g);
+
+  // ── Touch drag for this symbol ────────────────────────
+  g.addEventListener('touchstart', function(e){
+    if(e.target.classList.contains('port-hit')) return; // handled by port-hit
+    if(e.target.getAttribute('data-resize-id')) return;
+    e.stopPropagation(); e.preventDefault();
+    touchPanMob = null; // cancel any canvas pan
+    if(!selSet.has(sym.id)){ selId=sym.id; selSet.clear(); renderAll(); }
+    const touch = e.touches[0];
+    const sp = clientToSVG(touch.clientX, touch.clientY);
+    const toMove = selSet.size>0 ? [...selSet] : [sym.id];
+    const origPositions = {};
+    toMove.forEach(function(id){
+      const s=symbols.find(function(ss){return ss.id===id;}); if(s) origPositions[id]={x:s.x,y:s.y};
+    });
+    symDrag = {id:sym.id, startX:sp.x, startY:sp.y, origPositions};
+  }, {passive:false});
 }
 
 function renderConn(conn) {
@@ -341,7 +414,7 @@ function renderConn(conn) {
   const ts=symbols.find(function(s){return s.id===conn.toId;});
   if (!fs||!ts) return;
   const fp=portPos(fs,conn.fromPort), tp=portPos(ts,conn.toPort);
-  const full=orthPathFull(fp,conn.fromPort,tp,conn.toPort,conn.fromId,conn.toId);
+  const full=orthPathFull(fp,conn.fromPort,tp,conn.toPort,conn.fromId,conn.toId,conn.customPts);
   const d=full.d;
   const isSel=selId===conn.id;
 
@@ -353,6 +426,38 @@ function renderConn(conn) {
   const isJuncTop = ts.type==='JUNCTION' && conn.toPort==='top';
   if(!isJuncTop) connPathAttrs['marker-end']='url(#arr)';
   cg.appendChild(svgEl('path',connPathAttrs));
+
+  // Add waypoint handles when connection is selected
+  if (isSel) {
+    const pts = full.pts;
+    // Skip first and last points (they're at the ports)
+    for (let i = 1; i < pts.length - 1; i++) {
+      const pt = pts[i];
+      const handle = svgEl('circle', {
+        cx: pt[0], cy: pt[1], r: 6,
+        class: 'conn-waypoint',
+        'data-conn-id': conn.id,
+        'data-pt-index': i
+      });
+      (function(ci, pi) {
+        handle.addEventListener('mousedown', function(e) {
+          e.stopPropagation(); e.preventDefault();
+          const sp = clientToSVG(e.clientX, e.clientY);
+          connSegDrag = {
+            connId: ci,
+            ptIndex: pi,
+            startX: sp.x,
+            startY: sp.y,
+            origX: pt[0],
+            origY: pt[1]
+          };
+          document.addEventListener('mousemove', onConnSegMove);
+          document.addEventListener('mouseup', onConnSegUp);
+        });
+      })(conn.id, i);
+      cg.appendChild(handle);
+    }
+  }
 
   if (conn.label) {
     // Use actual path midpoint (midpoint of the central run) for accurate label placement
@@ -389,8 +494,17 @@ function segCollidesRect(x1,y1,x2,y2,rx,ry,rw,rh,pad){
   return false;
 }
 // Full path: returns {d, pts} where pts is the actual 6 waypoints used
-function orthPathFull(fp,fDir,tp,tDir,fromId,toId){
+function orthPathFull(fp,fDir,tp,tDir,fromId,toId,customPts){
   const pts=orthPathPts(fp,fDir,tp,tDir);
+  // Apply custom waypoint overrides if provided
+  if (customPts && customPts.length) {
+    for (let i = 0; i < customPts.length; i++) {
+      const cp = customPts[i];
+      if (cp && pts[i + 1]) {
+        pts[i + 1] = [cp.x, cp.y];
+      }
+    }
+  }
   const mkPath=function(p){return p.map(function(pt,i){return(i?'L':'M')+pt[0]+','+pt[1];}).join(' ');};
   if(!fromId&&!toId) return {d:mkPath(pts),pts};
   const PAD=10;
@@ -441,6 +555,21 @@ nodesG.addEventListener('dblclick', function(e){
   if(sym && sym.type!=='JUNCTION' && sym.type!=='COMMENT') startInlineEdit(sym);
 });
 
+// Double-tap to edit on touch devices
+nodesG.addEventListener('touchend', function(e){
+  const g=e.target.closest('[data-id]'); if(!g) return;
+  const sym=symbols.find(function(s){return s.id===g.dataset.id;});
+  if(!sym||sym.type==='JUNCTION'||sym.type==='COMMENT') return;
+  const now=Date.now();
+  if(sym.id===_lastTapSymId&&now-_lastTapTime<350){
+    e.stopPropagation(); e.preventDefault();
+    startInlineEdit(sym);
+    _lastTapTime=0; _lastTapSymId=null;
+    return;
+  }
+  _lastTapTime=now; _lastTapSymId=sym.id;
+});
+
 // Right-click context menu via delegation
 nodesG.addEventListener('contextmenu', function(e){
   e.preventDefault(); e.stopPropagation();
@@ -468,7 +597,9 @@ let sbType=null;
 
 document.querySelectorAll('.comp-item').forEach(function(item){
   item.addEventListener('mousedown', function(e){
-    if(e.button!==0) return; e.preventDefault();
+    if(e.button!==0) return;
+    if(window.innerWidth <= 640) return; // mobile uses tap-to-place
+    e.preventDefault();
     sbType=item.dataset.type;
     const dTxt=defaultText(sbType);
     const full=DEFS[sbType].prefix?DEFS[sbType].prefix+' '+dTxt:dTxt;
@@ -537,6 +668,7 @@ function defaultText(type){
 // ══════════════════════════════════════════════════════════
 function onSymMove(e){
   if(!symDrag) return;
+  symDrag.moved=true;
   const sp=clientToSVG(e.clientX,e.clientY);
   const dx=sp.x-symDrag.startX, dy=sp.y-symDrag.startY;
   const toMove=Object.keys(symDrag.origPositions);
@@ -548,32 +680,31 @@ function onSymMove(e){
     const g=nodesG.querySelector('[data-id="'+id+'"]');
     if(g) g.setAttribute('transform','translate('+sym.x+','+sym.y+')');
   });
+  // Invalidate custom waypoints on connections that touch moved symbols
+  connections.forEach(function(c){
+    if(toMove.indexOf(c.fromId)>=0||toMove.indexOf(c.toId)>=0) c.customPts=null;
+  });
   connsG.innerHTML=''; connections.forEach(renderConn);
-  // Highlight left sidebar as trash zone when dragging over it
-  const sidebar=document.getElementById('left-sidebar');
-  const sr=sidebar.getBoundingClientRect();
-  if(e.clientX>=sr.left&&e.clientX<=sr.right&&e.clientY>=sr.top&&e.clientY<=sr.bottom){
-    sidebar.classList.add('trash-hover');
-  } else {
-    sidebar.classList.remove('trash-hover');
-  }
 }
 function onSymUp(e){
-  const sidebar=document.getElementById('left-sidebar');
-  sidebar.classList.remove('trash-hover');
+  const drag = symDrag;
+  symDrag=null;
   document.removeEventListener('mousemove',onSymMove);
   document.removeEventListener('mouseup',  onSymUp);
-  if(symDrag&&e){
-    const sr=sidebar.getBoundingClientRect();
-    if(e.clientX>=sr.left&&e.clientX<=sr.right&&e.clientY>=sr.top&&e.clientY<=sr.bottom){
-      const toDelete=Object.keys(symDrag.origPositions);
-      symDrag=null;
+  // Drop on left sidebar → delete all dragged symbols + their connections
+  if(drag){
+    const sb=document.getElementById('left-sidebar');
+    const sbr=sb.getBoundingClientRect();
+    if(e.clientX>=sbr.left&&e.clientX<=sbr.right&&e.clientY>=sbr.top&&e.clientY<=sbr.bottom){
+      const toDelete=selSet.size>0?[...selSet]:[drag.id];
       toDelete.forEach(function(id){deleteSym(id);});
-      return;
+      selId=null;selSet.clear();renderAll();save();return;
     }
   }
-  symDrag=null;
-  renderAll(); save();
+  if(drag&&drag.moved){
+    renderAll();
+  }
+  save();
 }
 
 // ── Comment box resize ────────────────────────────────────
@@ -598,6 +729,25 @@ function onCommentResizeUp(){
   document.removeEventListener('mousemove',onCommentResizeMove);
   document.removeEventListener('mouseup',  onCommentResizeUp);
   renderAll(); save();
+}
+
+function onConnSegMove(e){
+  if(!connSegDrag) return;
+  const sp=clientToSVG(e.clientX,e.clientY);
+  const conn=connections.find(function(c){return c.id===connSegDrag.connId;});
+  if(!conn) return;
+  if(!conn.customPts) conn.customPts=[];
+  const idx=connSegDrag.ptIndex-1;
+  if(!conn.customPts[idx]) conn.customPts[idx]={x:connSegDrag.origX,y:connSegDrag.origY};
+  conn.customPts[idx].x=Math.round(connSegDrag.origX+(sp.x-connSegDrag.startX));
+  conn.customPts[idx].y=Math.round(connSegDrag.origY+(sp.y-connSegDrag.startY));
+  connsG.innerHTML=''; connections.forEach(renderConn);
+}
+function onConnSegUp(){
+  connSegDrag=null;
+  document.removeEventListener('mousemove',onConnSegMove);
+  document.removeEventListener('mouseup',  onConnSegUp);
+  save();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -917,7 +1067,54 @@ function showConnCtx(e,conn){
 function deleteSym(id){
   symbols=symbols.filter(function(s){return s.id!==id;});
   connections=connections.filter(function(c){return c.fromId!==id&&c.toId!==id;});
-  if(selId===id)selId=null; selSet.delete(id); renderAll(); save();
+  if(selId===id)selId=null; selSet.delete(id);
+  // Clean up orphaned junctions left behind after deleting a connected symbol
+  _cleanupOrphanedJunctions();
+  renderAll(); save();
+}
+function _cleanupOrphanedJunctions(){
+  // Find junctions that lost a through-path or have dangling connections
+  var changed=true;
+  while(changed){
+    changed=false;
+    for(var ji=0;ji<symbols.length;ji++){
+      var sym=symbols[ji];
+      if(sym.type!=='JUNCTION') continue;
+      var jConns=connections.filter(function(c){return c.fromId===sym.id||c.toId===sym.id;});
+      if(jConns.length===0){
+        // Isolated junction — remove it
+        symbols=symbols.filter(function(s){return s.id!==sym.id;});
+        connections=connections.filter(function(c){return c.fromId!==sym.id&&c.toId!==sym.id;});
+        changed=true; break;
+      }
+      var throughIn =jConns.find(function(c){return c.toId===sym.id&&!c.loopEntry;});
+      var throughOut=jConns.find(function(c){return c.fromId===sym.id&&!c.loopEntry;});
+      if(!throughIn||!throughOut){
+        // Through-path broken — dissolve junction
+        // Reconnect remaining non-loop connections directly
+        var otherConns=jConns.filter(function(c){return c!==throughIn&&c!==throughOut;});
+        if(throughIn&&throughOut){
+          // Shouldn't happen since we checked above, but just in case
+        } else if(throughIn&&!throughOut){
+          // Has an incoming through-wire but no outgoing — reconnect to next available
+          // If there's a loopEntry outgoing, keep it but redirect
+          var loopOut=jConns.find(function(c){return c.fromId===sym.id&&c.loopEntry;});
+          if(loopOut&&otherConns.length===0){
+            // Only loop outgoing left, no through — remove junction and loop connection
+            connections=connections.filter(function(c){return c.fromId!==sym.id&&c.toId!==sym.id;});
+          }
+        } else if(!throughIn&&throughOut){
+          // Has outgoing through-wire but no incoming — orphaned
+          connections=connections.filter(function(c){return c.fromId!==sym.id&&c.toId!==sym.id;});
+        } else {
+          // No through-path at all — remove all connections to/from this junction
+          connections=connections.filter(function(c){return c.fromId!==sym.id&&c.toId!==sym.id;});
+        }
+        symbols=symbols.filter(function(s){return s.id!==sym.id;});
+        changed=true; break;
+      }
+    }
+  }
 }
 function deleteConn(id){
   const conn=connections.find(function(c){return c.id===id;});
@@ -986,6 +1183,21 @@ document.addEventListener('keydown',function(e){
 svg.addEventListener('click',function(e){
   if(_marqDidSelect) return; // don't wipe marquee selection
   if(e.target===svg||e.target===document.getElementById('canvas-bg')){
+    if(placingTypeMob){
+      e.preventDefault();
+      const sp=clientToSVG(e.clientX,e.clientY);
+      const dTxt=defaultText(placingTypeMob);
+      const full=DEFS[placingTypeMob].prefix?DEFS[placingTypeMob].prefix+' '+dTxt:dTxt;
+      const dims=computeSymDims(placingTypeMob,full);
+      const sym={
+        id:uid(),type:placingTypeMob,
+        x:Math.round(Math.max(10,Math.min(CW-dims.w-10,sp.x-dims.w/2))),
+        y:Math.round(Math.max(10,Math.min(CH-dims.h-10,sp.y-dims.h/2))),
+        text:dTxt,w:dims.w,h:dims.h,embeddedCode:'',
+      };
+      symbols.push(sym);selId=sym.id;selSet.clear();renderAll();save();
+      setPlacingTypeMob(null);closeMobileSidebars();return;
+    }
     selId=null;selSet.clear();renderAll();
   }
 });
@@ -1571,223 +1783,276 @@ function load(){
   }catch{symbols=[];connections=[];}
 }
 
+// ══════════════════════════════════════════════════════════
+//  MOBILE / TOUCH SUPPORT
+// ══════════════════════════════════════════════════════════
+let pinchStartMob    = null;  // {dist, zoom}
+let touchPanMob      = null;  // {startX,startY,scrollX,scrollY}
+let placingTypeMob   = null;  // type string for tap-to-place
+let placingTypeMobTimeout = null; // auto-dismiss timeout
+let pendingWireMob   = null;  // {fromId, fromPort, fp} tap-to-connect
+let touchWireStartMob = null; // {clientX,clientY} to detect tap vs drag on port
+
+function touchDistMob(e){
+  const t=e.touches;
+  if(t.length<2) return null;
+  const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+
+function setPendingWireMob(data){
+  pendingWireMob = data;
+  tempConn.setAttribute('visibility','visible');
+  tempConn.setAttribute('d','M'+data.fp.x+','+data.fp.y+' L'+(data.fp.x+30)+','+data.fp.y);
+  // Pulse the source port dot
+  nodesG.querySelectorAll('.port-dot').forEach(function(d){
+    d.classList.toggle('port-pending',
+      d.closest('[data-id]')&&d.closest('[data-id]').dataset.id===data.fromId&&
+      d.getAttribute('data-port')===data.fromPort);
+  });
+  snapRing.setAttribute('visibility','hidden');
+  const hint=document.getElementById('place-hint');
+  if(hint){hint.textContent='Tap another port to connect';hint.classList.add('visible');}
+}
+function cancelPendingWireMob(){
+  pendingWireMob=null; touchWireStartMob=null;
+  tempConn.setAttribute('visibility','hidden');
+  snapRing.setAttribute('visibility','hidden');
+  nodesG.querySelectorAll('.port-pending').forEach(function(d){d.classList.remove('port-pending');});
+  const hint=document.getElementById('place-hint');
+  if(hint) hint.classList.remove('visible');
+}
+function setPlacingTypeMob(type){
+  placingTypeMob=type;
+  const hint=document.getElementById('place-hint');
+  if(!hint) return;
+  if(placingTypeMobTimeout){
+    clearTimeout(placingTypeMobTimeout);
+    placingTypeMobTimeout=null;
+  }
+  if(type){
+    hint.textContent='Tap canvas to place '+type;
+    hint.classList.add('visible');
+    placingTypeMobTimeout=setTimeout(function(){
+      setPlacingTypeMob(null);
+    },10000);
+  } else {
+    hint.classList.remove('visible');
+  }
+}
+function closeMobileSidebars(){
+  document.getElementById('left-sidebar').classList.remove('mobile-open');
+  document.getElementById('right-panel').classList.remove('mobile-open');
+  const bd=document.getElementById('mobile-backdrop');
+  if(bd) bd.classList.remove('visible');
+  document.querySelectorAll('.mobile-nav-btn').forEach(function(b){b.classList.remove('active');});
+}
+
+// Canvas-wrapper: pan + pinch + place-mode tap
+wrap.addEventListener('touchstart',function(e){
+  if(e.touches.length===2){
+    e.preventDefault();
+    pinchStartMob={dist:touchDistMob(e),zoom};
+    touchPanMob=null;
+    return;
+  }
+  if(e.touches.length===1){
+    const tgt=e.target;
+    if(tgt===svg||tgt===document.getElementById('canvas-bg')||
+       tgt===document.getElementById('connections-layer')||
+       tgt===document.getElementById('nodes-layer')){
+      if(pendingWireMob){e.preventDefault();cancelPendingWireMob();return;}
+      if(placingTypeMob){
+        e.preventDefault();
+        const touch=e.touches[0];
+        const sp=clientToSVG(touch.clientX,touch.clientY);
+        const dTxt=defaultText(placingTypeMob);
+        const full=DEFS[placingTypeMob].prefix?DEFS[placingTypeMob].prefix+' '+dTxt:dTxt;
+        const dims=computeSymDims(placingTypeMob,full);
+        const sym={
+          id:uid(),type:placingTypeMob,
+          x:Math.round(Math.max(10,Math.min(CW-dims.w-10,sp.x-dims.w/2))),
+          y:Math.round(Math.max(10,Math.min(CH-dims.h-10,sp.y-dims.h/2))),
+          text:dTxt,w:dims.w,h:dims.h,embeddedCode:'',
+        };
+        symbols.push(sym);selId=sym.id;selSet.clear();renderAll();save();
+        setPlacingTypeMob(null);closeMobileSidebars();return;
+      }
+      touchPanMob={startX:e.touches[0].clientX,startY:e.touches[0].clientY,
+                   scrollX:wrap.scrollLeft,scrollY:wrap.scrollTop};
+    }
+  }
+},{passive:false});
+
+document.addEventListener('touchmove',function(e){
+  if(e.touches.length===2&&pinchStartMob){
+    e.preventDefault();
+    const d=touchDistMob(e); if(!d) return;
+    zoom=Math.max(0.25,Math.min(3,parseFloat((pinchStartMob.zoom*(d/pinchStartMob.dist)).toFixed(2))));
+    applyZoom();return;
+  }
+  const touch=e.touches[0];
+  if(touchPanMob){
+    e.preventDefault();
+    wrap.scrollLeft=touchPanMob.scrollX-(touch.clientX-touchPanMob.startX);
+    wrap.scrollTop =touchPanMob.scrollY-(touch.clientY-touchPanMob.startY);
+    return;
+  }
+  if(symDrag){
+    e.preventDefault();
+    const sp=clientToSVG(touch.clientX,touch.clientY);
+    const dx=sp.x-symDrag.startX, dy=sp.y-symDrag.startY;
+    Object.keys(symDrag.origPositions).forEach(function(id){
+      const sym=symbols.find(function(s){return s.id===id;});
+      const orig=symDrag.origPositions[id]; if(!sym||!orig) return;
+      sym.x=Math.round(Math.max(0,Math.min(CW-sym.w,orig.x+dx)));
+      sym.y=Math.round(Math.max(0,Math.min(CH-sym.h,orig.y+dy)));
+      const g=nodesG.querySelector('[data-id="'+id+'"]');
+      if(g) g.setAttribute('transform','translate('+sym.x+','+sym.y+')');
+    });
+    connsG.innerHTML=''; connections.forEach(renderConn);
+    return;
+  }
+  if(wireDrag){
+    e.preventDefault();
+    const sp=clientToSVG(touch.clientX,touch.clientY);
+    const fs=symbols.find(function(s){return s.id===wireDrag.fromId;}); if(!fs)return;
+    const fp=portPos(fs,wireDrag.fromPort);
+    const snp=findSnap(sp.x,sp.y,wireDrag.fromId);
+    if(snp){
+      snapRing.setAttribute('cx',snp.x);snapRing.setAttribute('cy',snp.y);
+      snapRing.setAttribute('visibility','visible');
+      tempConn.setAttribute('d',orthPath(fp,wireDrag.fromPort,snp,snp.port));
+    } else {
+      snapRing.setAttribute('visibility','hidden');
+      tempConn.setAttribute('d','M'+fp.x+','+fp.y+' L'+sp.x+','+sp.y);
+    }
+    return;
+  }
+  if(pendingWireMob){
+    e.preventDefault();
+    const sp=clientToSVG(touch.clientX,touch.clientY);
+    const fp=pendingWireMob.fp;
+    const snp=findSnap(sp.x,sp.y,pendingWireMob.fromId);
+    if(snp){
+      snapRing.setAttribute('cx',snp.x);snapRing.setAttribute('cy',snp.y);
+      snapRing.setAttribute('visibility','visible');
+      tempConn.setAttribute('d',orthPath(fp,pendingWireMob.fromPort,snp,snp.port));
+    } else {
+      snapRing.setAttribute('visibility','hidden');
+      tempConn.setAttribute('d','M'+fp.x+','+fp.y+' L'+sp.x+','+sp.y);
+    }
+    return;
+  }
+},{passive:false});
+
+document.addEventListener('touchend',function(e){
+  pinchStartMob=null;
+  if(touchPanMob){touchPanMob=null;return;}
+  if(symDrag){
+    const touch=e.changedTouches[0];
+    const drag=symDrag; symDrag=null;
+    // Drop on left sidebar → delete
+    const sb=document.getElementById('left-sidebar');
+    const sbr=sb.getBoundingClientRect();
+    if(touch.clientX>=sbr.left&&touch.clientX<=sbr.right&&
+       touch.clientY>=sbr.top &&touch.clientY<=sbr.bottom){
+      const toDelete=selSet.size>0?[...selSet]:[drag.id];
+      toDelete.forEach(function(id){deleteSym(id);});
+      selId=null;selSet.clear();renderAll();save();return;
+    }
+    renderAll();save();return;
+  }
+  if(wireDrag){
+    // Drag-wire completed by lifting finger
+    const touch=e.changedTouches[0];
+    const sp=clientToSVG(touch.clientX,touch.clientY);
+    const snp=findSnap(sp.x,sp.y,wireDrag.fromId);
+    tempConn.setAttribute('visibility','hidden');
+    snapRing.setAttribute('visibility','hidden');
+    if(snp) addConnection(wireDrag.fromId,wireDrag.fromPort,snp.symId,snp.port);
+    wireDrag=null;return;
+  }
+},{passive:true});
+
+// ── Setup mobile UI (injected elements) ───────────────
+function setupMobileUI(){
+  // Place hint bar
+  const hint=document.createElement('div');
+  hint.id='place-hint'; document.body.appendChild(hint);
+  hint.addEventListener('click',function(){cancelPendingWireMob();setPlacingTypeMob(null);});
+
+  // Backdrop
+  const bd=document.createElement('div');
+  bd.id='mobile-backdrop'; document.body.appendChild(bd);
+  bd.addEventListener('click',closeMobileSidebars);
+
+  // Drag-handle pills
+  document.querySelectorAll('.sidebar-header').forEach(function(h){
+    const pill=document.createElement('div');
+    pill.className='sidebar-drag-handle';
+    h.parentElement.insertBefore(pill,h);
+  });
+
+  // Bottom nav
+  const nav=document.createElement('div'); nav.id='mobile-nav';
+  nav.innerHTML='<button class="mobile-nav-btn" id="mob-btn-sym">'+
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+
+    '<rect x="3" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/>'+
+    '<path d="M12 5h7M12 12h7M12 19h7"/></svg> Symbols</button>'+
+    '<button class="mobile-nav-btn" id="mob-btn-code">'+
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+
+    '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Code &amp; Run</button>';
+  document.body.appendChild(nav);
+
+  const ls=document.getElementById('left-sidebar');
+  const rp=document.getElementById('right-panel');
+
+  document.getElementById('mob-btn-sym').addEventListener('click',function(){
+    const isOpen=ls.classList.contains('mobile-open');
+    closeMobileSidebars();
+    if(!isOpen){ls.classList.add('mobile-open');bd.classList.add('visible');this.classList.add('active');}
+    cancelPendingWireMob();setPlacingTypeMob(null);
+  });
+  document.getElementById('mob-btn-code').addEventListener('click',function(){
+    const isOpen=rp.classList.contains('mobile-open');
+    closeMobileSidebars();
+    if(!isOpen){rp.classList.add('mobile-open');bd.classList.add('visible');this.classList.add('active');}
+  });
+
+  // Swipe-down to close
+  [ls,rp].forEach(function(sidebar){
+    let sy=null;
+    sidebar.addEventListener('touchstart',function(e){sy=e.touches[0].clientY;},{passive:true});
+    sidebar.addEventListener('touchend',function(e){
+      if(sy===null)return;
+      if(e.changedTouches[0].clientY-sy>60)closeMobileSidebars();
+      sy=null;
+    },{passive:true});
+  });
+
+  // Tap-to-place from component library
+  document.getElementById('component-library').addEventListener('click',function(e){
+    const item=e.target.closest('.comp-item');
+    if(!item||!item.dataset.type) return;
+    closeMobileSidebars();
+    setPlacingTypeMob(item.dataset.type);
+  });
+
+  // Override positionZoomControls on mobile
+  if(window.innerWidth<=640){
+    const zc=document.getElementById('zoom-controls');
+    if(zc){zc.style.right='12px';zc.style.bottom='52px';}
+  }
+}
+
 load();
 applyZoom();
 renderAll();
+setupMobileUI();
 requestAnimationFrame(function(){
   wrap.scrollLeft=(CW*zoom-wrap.clientWidth)/2;
   wrap.scrollTop =(CH*zoom-wrap.clientHeight)/2;
   positionZoomControls();
 });
 window.addEventListener('resize',positionZoomControls);
-
-// ══════════════════════════════════════════════════════════
-//  MOBILE SIDEBAR TOGGLE
-// ══════════════════════════════════════════════════════════
-(function(){
-  const mBtn=document.getElementById('btn-mobile-sidebar');
-  const lSide=document.getElementById('left-sidebar');
-  if(!mBtn||!lSide) return;
-  mBtn.addEventListener('click',function(){
-    lSide.classList.toggle('mobile-open');
-  });
-  // Close sidebar when touching the canvas
-  wrap.addEventListener('touchstart',function(){
-    if(lSide.classList.contains('mobile-open')) lSide.classList.remove('mobile-open');
-  },{passive:true});
-
-  // Wire mobile run bar buttons to main run/step/reset
-  var mr=document.getElementById('mob-btn-run');
-  var ms=document.getElementById('mob-btn-step');
-  var mx=document.getElementById('mob-btn-reset');
-  if(mr) mr.addEventListener('click',function(){document.getElementById('btn-run').click();});
-  if(ms) ms.addEventListener('click',function(){document.getElementById('btn-step').click();});
-  if(mx) mx.addEventListener('click',function(){document.getElementById('btn-reset').click();});
-})();
-
-// ══════════════════════════════════════════════════════════
-//  TOUCH SUPPORT (mobile & tablet)
-// ══════════════════════════════════════════════════════════
-(function(){
-
-  // ── Pinch-to-zoom ──────────────────────────────────────
-  var _pinch=null;
-  wrap.addEventListener('touchstart',function(e){
-    if(e.touches.length===2){
-      var t1=e.touches[0],t2=e.touches[1];
-      _pinch={dist:Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY),zoom:zoom};
-    }
-  },{passive:true});
-  wrap.addEventListener('touchmove',function(e){
-    if(e.touches.length===2&&_pinch){
-      e.preventDefault();
-      var t1=e.touches[0],t2=e.touches[1];
-      var dist=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);
-      zoom=Math.max(0.25,Math.min(3,parseFloat((_pinch.zoom*dist/_pinch.dist).toFixed(3))));
-      applyZoom();
-    }
-  },{passive:false});
-  wrap.addEventListener('touchend',function(e){
-    if(e.touches.length<2)_pinch=null;
-  },{passive:true});
-
-  // ── Sidebar touch drag-to-place ────────────────────────
-  document.querySelectorAll('.comp-item').forEach(function(item){
-    item.addEventListener('touchstart',function(e){
-      e.preventDefault();
-      var touch=e.touches[0];
-      sbType=item.dataset.type;
-      var dTxt=defaultText(sbType);
-      var full=DEFS[sbType].prefix?DEFS[sbType].prefix+' '+dTxt:dTxt;
-      var dims=computeSymDims(sbType,full);
-      dragGhost.style.display='block';
-      dragGhost.setAttribute('viewBox','0 0 '+dims.w+' '+dims.h);
-      dragGhost.setAttribute('width',dims.w*0.65);
-      dragGhost.setAttribute('height',dims.h*0.65);
-      posGhost(touch,dims);
-      buildGhost(sbType,dims);
-      document.addEventListener('touchmove',_sbTMove,{passive:false});
-      document.addEventListener('touchend',_sbTEnd);
-      // Close sidebar after picking a symbol
-      var lSide=document.getElementById('left-sidebar');
-      if(lSide) lSide.classList.remove('mobile-open');
-    },{passive:false});
-  });
-
-  function _sbTMove(e){
-    e.preventDefault();
-    if(sbType) posGhost(e.touches[0]);
-  }
-  function _sbTEnd(e){
-    document.removeEventListener('touchmove',_sbTMove);
-    document.removeEventListener('touchend',_sbTEnd);
-    dragGhost.style.display='none';
-    if(!sbType) return;
-    var touch=e.changedTouches[0];
-    var r=wrap.getBoundingClientRect();
-    if(touch.clientX>=r.left&&touch.clientX<=r.right&&touch.clientY>=r.top&&touch.clientY<=r.bottom){
-      var sp=clientToSVG(touch.clientX,touch.clientY);
-      var dTxt=defaultText(sbType);
-      var full=DEFS[sbType].prefix?DEFS[sbType].prefix+' '+dTxt:dTxt;
-      var dims=computeSymDims(sbType,full);
-      var sym={id:uid(),type:sbType,
-        x:Math.round(Math.max(10,Math.min(CW-dims.w-10,sp.x-dims.w/2))),
-        y:Math.round(Math.max(10,Math.min(CH-dims.h-10,sp.y-dims.h/2))),
-        text:dTxt,w:dims.w,h:dims.h,embeddedCode:''};
-      symbols.push(sym); selId=sym.id; selSet.clear(); renderAll(); save();
-    }
-    sbType=null;
-  }
-
-  // ── Canvas touch: symbol drag, pan, double-tap edit ────
-  var _tDragSym=null;
-  var _tPan=null;
-  var _lastTap=0;
-
-  svg.addEventListener('touchstart',function(e){
-    if(e.touches.length>1) return;
-    var touch=e.touches[0];
-    var target=touch.target;
-    var symG=target.closest('[data-id]');
-    var now=Date.now();
-
-    if(symG){
-      // Double-tap to edit
-      if(now-_lastTap<350){
-        e.preventDefault();
-        var sym=symbols.find(function(s){return s.id===symG.dataset.id;});
-        if(sym&&sym.type!=='JUNCTION'&&sym.type!=='COMMENT') startInlineEdit(sym);
-        _lastTap=0;
-        return;
-      }
-      _lastTap=now;
-
-      // Skip if touching a port-hit (wire drawing — not handled by touch yet)
-      if(target.classList.contains('port-hit')) return;
-
-      e.preventDefault();
-      var sym=symbols.find(function(s){return s.id===symG.dataset.id;});
-      if(!sym) return;
-      if(!selSet.has(sym.id)){selId=sym.id;selSet.clear();}
-      var sp=clientToSVG(touch.clientX,touch.clientY);
-      var toMove=selSet.size>0?[...selSet]:[sym.id];
-      var origPositions={};
-      toMove.forEach(function(id){
-        var s=symbols.find(function(ss){return ss.id===id;});
-        if(s) origPositions[id]={x:s.x,y:s.y};
-      });
-      _tDragSym={id:sym.id,startX:sp.x,startY:sp.y,origPositions:origPositions};
-      renderAll();
-      document.addEventListener('touchmove',_symTMove,{passive:false});
-      document.addEventListener('touchend',_symTEnd);
-      return;
-    }
-
-    _lastTap=0;
-    // Background — pan
-    var connG=target.closest('[data-conn-id]');
-    if(!connG){
-      _tPan={startX:touch.clientX,startY:touch.clientY,scrollX:wrap.scrollLeft,scrollY:wrap.scrollTop};
-      document.addEventListener('touchmove',_panTMove,{passive:false});
-      document.addEventListener('touchend',_panTEnd);
-    }
-  },{passive:false});
-
-  function _symTMove(e){
-    if(!_tDragSym||e.touches.length!==1) return;
-    e.preventDefault();
-    var touch=e.touches[0];
-    var sp=clientToSVG(touch.clientX,touch.clientY);
-    var dx=sp.x-_tDragSym.startX, dy=sp.y-_tDragSym.startY;
-    var toMove=Object.keys(_tDragSym.origPositions);
-    toMove.forEach(function(id){
-      var sym=symbols.find(function(s){return s.id===id;});
-      var orig=_tDragSym.origPositions[id]; if(!sym||!orig) return;
-      sym.x=Math.round(Math.max(0,Math.min(CW-sym.w,orig.x+dx)));
-      sym.y=Math.round(Math.max(0,Math.min(CH-sym.h,orig.y+dy)));
-      var gEl=nodesG.querySelector('[data-id="'+id+'"]');
-      if(gEl) gEl.setAttribute('transform','translate('+sym.x+','+sym.y+')');
-    });
-    connsG.innerHTML=''; connections.forEach(renderConn);
-    // Trash-zone highlight
-    var sidebar=document.getElementById('left-sidebar');
-    var sr=sidebar.getBoundingClientRect();
-    if(touch.clientX>=sr.left&&touch.clientX<=sr.right&&touch.clientY>=sr.top&&touch.clientY<=sr.bottom){
-      sidebar.classList.add('trash-hover');
-    } else {
-      sidebar.classList.remove('trash-hover');
-    }
-  }
-
-  function _symTEnd(e){
-    document.removeEventListener('touchmove',_symTMove);
-    document.removeEventListener('touchend',_symTEnd);
-    var sidebar=document.getElementById('left-sidebar');
-    sidebar.classList.remove('trash-hover');
-    if(!_tDragSym){renderAll();save();return;}
-    var touch=e.changedTouches[0];
-    var sr=sidebar.getBoundingClientRect();
-    if(touch.clientX>=sr.left&&touch.clientX<=sr.right&&touch.clientY>=sr.top&&touch.clientY<=sr.bottom){
-      var toDelete=Object.keys(_tDragSym.origPositions);
-      _tDragSym=null;
-      toDelete.forEach(function(id){deleteSym(id);});
-      return;
-    }
-    _tDragSym=null;
-    renderAll(); save();
-  }
-
-  function _panTMove(e){
-    if(!_tPan||e.touches.length!==1) return;
-    e.preventDefault();
-    var touch=e.touches[0];
-    wrap.scrollLeft=_tPan.scrollX-(touch.clientX-_tPan.startX);
-    wrap.scrollTop =_tPan.scrollY-(touch.clientY-_tPan.startY);
-  }
-  function _panTEnd(){
-    _tPan=null;
-    document.removeEventListener('touchmove',_panTMove);
-    document.removeEventListener('touchend',_panTEnd);
-  }
-
-})(); // end touch support IIFE
