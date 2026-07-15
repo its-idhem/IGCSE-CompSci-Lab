@@ -72,8 +72,12 @@ let panning     = null;  // {sx,sy} right-click pan start
 let resizing    = null;  // {id, ox, oy, ow, oh} comment resize
 let selBox      = null;  // {x0,y0,x1,y1} rubber-band
 let justBoxSelected = false; // prevents the post-mouseup click from clearing selection
-let placingType = null;  // mobile: type string of component being placed
-let pinchStart  = null;  // {dist, zoom} for pinch-to-zoom
+let placingType  = null;  // mobile: type string of component being placed
+let placingTypeTimeout = null; // auto-dismiss timeout
+let pinchStart   = null;  // {dist, zoom} for pinch-to-zoom
+let pendingPort  = null;  // mobile tap-to-connect: {fromId, x1, y1} output port waiting for a target
+let touchPortStart = null; // {clientX, clientY} to distinguish tap vs drag on port-out touch
+let clickConnect = null;  // desktop click-to-connect: {fromId, x1, y1} output port waiting for a target
 
 // ── ZOOM ──────────────────────────────────────────────────────
 let zoom = 1;
@@ -214,12 +218,50 @@ function drawBody(g,comp){
 function drawPorts(g,comp){
   const def=GATES[comp.type];
   def.inPts.forEach((pt,i)=>{
-    g.appendChild(el('circle',{cx:pt.x,cy:pt.y,r:5,
-      class:'port-circle port-in','data-comp-id':comp.id,'data-port':i}));
+    const circle=el('circle',{cx:pt.x,cy:pt.y,r:5,
+      class:'port-circle port-in','data-comp-id':comp.id,'data-port':i});
+    // Touch tap on input port → complete pending connection
+    circle.addEventListener('touchend',e=>{
+      e.stopPropagation();e.preventDefault();
+      if(pendingPort){
+        const toId=comp.id;
+        const toPort=i;
+        if(toId!==pendingPort.fromId&&!state.wires.find(w=>w.toId===toId&&w.toPort===toPort)){
+          state.wires.push({id:`w${uid++}`,fromId:pendingPort.fromId,toId,toPort});
+          propagate();
+        }
+        cancelPendingPort();render();
+      }
+    },{passive:false});
+    // Click on input port → complete click-to-connect
+    circle.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(clickConnect){
+        const toId=comp.id;
+        const toPort=i;
+        if(toId!==clickConnect.fromId&&!state.wires.find(w=>w.toId===toId&&w.toPort===toPort)){
+          state.wires.push({id:`w${uid++}`,fromId:clickConnect.fromId,toId,toPort});
+          propagate();
+        }
+        cancelClickConnect();render();
+      }
+    });
+    g.appendChild(circle);
   });
   if(def.outPt){
-    g.appendChild(el('circle',{cx:def.outPt.x,cy:def.outPt.y,r:5,
-      class:'port-circle port-out','data-comp-id':comp.id}));
+    const outCircle=el('circle',{cx:def.outPt.x,cy:def.outPt.y,r:5,
+      class:'port-circle port-out','data-comp-id':comp.id});
+    // Click on output port → start click-to-connect
+    outCircle.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(clickConnect){
+        cancelClickConnect();
+        return;
+      }
+      const def2=GATES[comp.type];
+      setClickConnect({fromId:comp.id,x1:comp.x+def2.outPt.x,y1:comp.y+def2.outPt.y});
+    });
+    g.appendChild(outCircle);
   }
 }
 
@@ -423,18 +465,36 @@ function attachCompEvents(g,comp){
       tw.setAttribute('d',wirePath(drawingWire.x1,drawingWire.y1,pt.x,pt.y));
       clearSelection();
     });
-    // Output port → start wire (touch)
+    // Output port → start wire (touch): record start pos; dragging updates wire, tap enters pending mode
     p.addEventListener('touchstart',e=>{
       e.stopPropagation();e.preventDefault();
       panning=null;
       const def=GATES[comp.type];
       const touch=e.touches[0];
+      touchPortStart={clientX:touch.clientX,clientY:touch.clientY};
       const pt=svgPt(touch);
       drawingWire={fromId:comp.id,x1:comp.x+def.outPt.x,y1:comp.y+def.outPt.y};
       const tw=document.getElementById('temp-wire');
       tw.setAttribute('visibility','visible');
       tw.setAttribute('d',wirePath(drawingWire.x1,drawingWire.y1,pt.x,pt.y));
       clearSelection();
+    },{passive:false});
+    // Output port touchend: if finger barely moved → tap-to-connect mode; else let global touchend handle drag-wire
+    p.addEventListener('touchend',e=>{
+      e.stopPropagation();
+      if(!drawingWire||!touchPortStart)return;
+      const touch=e.changedTouches[0];
+      const dx=Math.abs(touch.clientX-touchPortStart.clientX);
+      const dy=Math.abs(touch.clientY-touchPortStart.clientY);
+      touchPortStart=null;
+      if(dx<18&&dy<18){
+        // It was a tap → switch to pending mode
+        const pending={fromId:drawingWire.fromId,x1:drawingWire.x1,y1:drawingWire.y1};
+        cancelWire();
+        setPendingPort(pending);
+        e.preventDefault();
+      }
+      // else: let the global touchend handle it as a drag-wire attempt
     },{passive:false});
   });
 
@@ -694,6 +754,7 @@ document.getElementById('canvas-wrapper').addEventListener('contextmenu',e=>e.pr
 document.getElementById('canvas').addEventListener('mousedown',e=>{
   if(e.button!==0)return;
   if(e.target.id!=='canvas'&&e.target.id!=='canvas-bg')return;
+  if(placingType)return;
   e.preventDefault();
   if(!e.shiftKey) clearSelection();
   const pt=svgPt(e);
@@ -702,10 +763,83 @@ document.getElementById('canvas').addEventListener('mousedown',e=>{
 
 document.getElementById('canvas').addEventListener('click',e=>{
   if(e.target.id==='canvas'||e.target.id==='canvas-bg'){
+    if(placingType){
+      const pt=svgPt(e);
+      const def=GATES[placingType];
+      const comp={id:newId(),type:placingType,
+        x:Math.max(0,pt.x-def.w/2),y:Math.max(0,pt.y-def.h/2),value:0,label:''};
+      if(placingType==='INPUT')       comp.label=nextInputLabel();
+      else if(placingType==='OUTPUT') comp.label=nextOutputLabel();
+      else if(placingType==='COMMENT'){comp.comment='Note...';comp.cw=130;comp.ch=64;}
+      state.components.push(comp);
+      propagate();render();
+      setPlacingType(null);
+      closeMobileSidebars();
+      return;
+    }
     if(justBoxSelected){ justBoxSelected=false; return; }
+    if(clickConnect){ cancelClickConnect(); return; }
     clearSelection();
   }
 });
+
+// ── TAP-TO-CONNECT (mobile) ────────────────────────────────────
+function setPendingPort(pending){
+  pendingPort=pending;
+  // Highlight the pending output port circle
+  document.querySelectorAll('.port-out').forEach(p=>{
+    p.classList.toggle('port-pending',p.getAttribute('data-comp-id')===pending.fromId);
+  });
+  // Draw a static dashed wire from the output to its own position (visual anchor)
+  const tw=document.getElementById('temp-wire');
+  tw.setAttribute('visibility','visible');
+  tw.setAttribute('d',wirePath(pending.x1,pending.y1,pending.x1+40,pending.y1));
+  // Show a hint
+  const hint=document.getElementById('place-hint');
+  if(hint){hint.textContent='Now tap an input port to connect';hint.classList.add('visible');}
+}
+function cancelPendingPort(){
+  pendingPort=null;
+  touchPortStart=null;
+  document.querySelectorAll('.port-pending').forEach(p=>p.classList.remove('port-pending'));
+  cancelWire();
+  const hint=document.getElementById('place-hint');
+  if(hint)hint.classList.remove('visible');
+}
+
+function setClickConnect(data){
+  clickConnect=data;
+  document.querySelectorAll('.port-out').forEach(p=>{
+    p.classList.toggle('port-pending',p.getAttribute('data-comp-id')===data.fromId);
+  });
+  const tw=document.getElementById('temp-wire');
+  tw.setAttribute('visibility','visible');
+  tw.setAttribute('d',wirePath(data.x1,data.y1,data.x1+40,data.y1));
+}
+function cancelClickConnect(){
+  clickConnect=null;
+  document.querySelectorAll('.port-pending').forEach(p=>p.classList.remove('port-pending'));
+  const tw=document.getElementById('temp-wire');
+  tw.setAttribute('visibility','hidden');
+  tw.setAttribute('d','');
+}
+
+function setClickConnect(data){
+  clickConnect=data;
+  document.querySelectorAll('.port-out').forEach(p=>{
+    p.classList.toggle('port-pending',p.getAttribute('data-comp-id')===data.fromId);
+  });
+  const tw=document.getElementById('temp-wire');
+  tw.setAttribute('visibility','visible');
+  tw.setAttribute('d',wirePath(data.x1,data.y1,data.x1+40,data.y1));
+}
+function cancelClickConnect(){
+  clickConnect=null;
+  document.querySelectorAll('.port-pending').forEach(p=>p.classList.remove('port-pending'));
+  const tw=document.getElementById('temp-wire');
+  tw.setAttribute('visibility','hidden');
+  tw.setAttribute('d','');
+}
 
 // ── TOUCH EVENTS ──────────────────────────────────────────────
 
@@ -727,7 +861,14 @@ document.getElementById('canvas-wrapper').addEventListener('touchstart',e=>{
   if(e.touches.length===1){
     // Only start pan if touch is on the canvas background (not a component)
     const tgt=e.target;
-    if(tgt.id==='canvas'||tgt.id==='canvas-bg'){
+    if(tgt.id==='canvas'||tgt.id==='canvas-bg'||
+       tgt.id==='wires-layer'||tgt.id==='comps-layer'){
+      // Tap on canvas background cancels pending port connection
+      if(pendingPort){
+        e.preventDefault();
+        cancelPendingPort();
+        return;
+      }
       // Handle place mode: tap canvas to place selected component type
       if(placingType){
         e.preventDefault();
@@ -789,12 +930,13 @@ document.addEventListener('touchmove',e=>{
     if(anyMoved)dragging.moved=true;
     return;
   }
-  // Wire drawing
-  if(drawingWire){
+  // Wire drawing (drag) or update pending wire to follow finger
+  if(drawingWire||pendingPort){
     e.preventDefault();
     const pt=svgPt(fakeEv);
+    const src=drawingWire||pendingPort;
     document.getElementById('temp-wire')
-      .setAttribute('d',wirePath(drawingWire.x1,drawingWire.y1,pt.x,pt.y));
+      .setAttribute('d',wirePath(src.x1,src.y1,pt.x,pt.y));
     return;
   }
 },{passive:false});
@@ -893,6 +1035,7 @@ document.addEventListener('keydown',e=>{
 
 // ── SIDEBAR & TOOLTIP ─────────────────────────────────────────
 const globalTooltip=document.getElementById('global-tooltip');
+let globalTooltipTimeout;
 function posTooltip(e){
   const sr=document.getElementById('left-sidebar').getBoundingClientRect();
   const ty=Math.max(8,Math.min(window.innerHeight-globalTooltip.offsetHeight-8,
@@ -914,6 +1057,11 @@ function buildSidebar(){
     {type:'COMMENT',label:'Comment Box',desc:'Drag border to move. Drag ▿ to resize.'},
   ];
   const lib=document.getElementById('component-library');
+  if (!globalTooltip.dataset.hoverInit) {
+    globalTooltip.dataset.hoverInit = '1';
+    globalTooltip.addEventListener('mouseenter', () => clearTimeout(globalTooltipTimeout));
+    globalTooltip.addEventListener('mouseleave', () => { globalTooltip.style.display = 'none'; });
+  }
   DEFS.forEach(def=>{
     if(def.sep){
       const d=document.createElement('div');
@@ -959,9 +1107,9 @@ function buildSidebar(){
       tipH=`<span style="font-size:11px;color:var(--text-secondary);max-width:180px;display:block;white-space:normal;">${def.desc}</span>`;
     }
     if(tipH){
-      item.addEventListener('mouseenter',e=>{globalTooltip.innerHTML=tipH;globalTooltip.style.display='block';posTooltip(e);});
+      item.addEventListener('mouseenter',e=>{clearTimeout(globalTooltipTimeout);globalTooltip.innerHTML=tipH;globalTooltip.style.display='block';posTooltip(e);});
       item.addEventListener('mousemove',posTooltip);
-      item.addEventListener('mouseleave',()=>globalTooltip.style.display='none');
+      item.addEventListener('mouseleave',()=>{globalTooltipTimeout=setTimeout(()=>{globalTooltip.style.display='none';},150);});
     }
     lib.appendChild(item);
   });
@@ -1023,8 +1171,19 @@ function setPlacingType(type){
   placingType=type;
   const hint=document.getElementById('place-hint');
   if(!hint)return;
-  if(type){hint.textContent=`Tap canvas to place ${type}`;hint.classList.add('visible');}
-  else{hint.classList.remove('visible');}
+  if(placingTypeTimeout){
+    clearTimeout(placingTypeTimeout);
+    placingTypeTimeout=null;
+  }
+  if(type){
+    hint.textContent=`Tap canvas to place ${type}`;
+    hint.classList.add('visible');
+    placingTypeTimeout=setTimeout(()=>{
+      setPlacingType(null);
+    },10000);
+  } else {
+    hint.classList.remove('visible');
+  }
 }
 
 function closeMobileSidebars(){
