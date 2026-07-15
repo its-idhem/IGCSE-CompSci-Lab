@@ -3,25 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CIE Logic Gates</title>
+<title>Logic Gates — IGCSE Computer Science Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/logic-gates.css">
 </head>
 <body>
 
-<!-- TITLE BAR -->
 <div id="titlebar">
   <a class="logo" href="../index.html">
-    <!-- NOT gate icon: triangle + bubble -->
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3 5 L17 12 L3 19 Z"/>
       <circle cx="20" cy="12" r="2.5"/>
     </svg>
-    CIE Logic Gates
+    Logic Gates
   </a>
-  <div class="title-center">IGCSE Computer Science — Logic Gate Simulator</div>
+  <div class="title-center">IGCSE Computer Science Lab — Logic Gate Simulator</div>
   <div class="title-actions">
     <a class="title-btn" href="pseudocode.html" style="text-decoration:none">Pseudocode ↗</a>
     <a class="title-btn" href="flowcharts.html" style="text-decoration:none">Flowcharts ↗</a>
@@ -33,22 +31,18 @@
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
       Clear
     </button>
-    <!-- ⏾ = dark mode symbol; shows ☀ in light mode -->
     <button class="title-btn" id="btn-theme" title="Toggle light/dark mode">⏾</button>
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <div id="workspace">
 
-    <!-- LEFT: Component Library -->
     <div id="left-sidebar">
       <div class="sidebar-header">Components</div>
       <div id="component-library"></div>
     </div>
 
-    <!-- CENTER: Canvas + zoom controls pinned to wrapper bottom-right -->
     <div id="canvas-wrapper">
       <svg id="canvas" viewBox="0 0 3000 2000" width="3000" height="2000" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -62,7 +56,6 @@
         <path id="temp-wire" fill="none" visibility="hidden"/>
         <rect id="sel-rect" visibility="hidden" class="sel-rect-style"/>
       </svg>
-      <!-- Zoom controls: sticky inside the scrollable canvas area -->
       <div id="zoom-controls">
         <button class="zoom-btn" id="btn-zoom-in"  title="Zoom in">+</button>
         <span   class="zoom-btn zoom-label" id="zoom-label">100%</span>
@@ -71,10 +64,8 @@
       </div>
     </div>
 
-    <!-- RESIZER between canvas and truth table -->
     <div id="sidebar-resizer" title="Drag to resize truth table"></div>
 
-    <!-- RIGHT: Truth Table -->
     <div id="right-sidebar">
       <div class="sidebar-header">Truth Table</div>
       <div id="truth-table-container">
@@ -82,7 +73,7 @@
       </div>
     </div>
 
-  </div><!-- end #workspace -->
+  </div>
 
   <div id="expression-bar">
     <span class="expr-label">Expression</span>
@@ -96,7 +87,6 @@
   </div>
 </div>
 
-<!-- Shared floating tooltip (JS-positioned, never clipped) -->
 <div id="global-tooltip"></div>
 
 <script src="js/logic-gates.js"></script>
