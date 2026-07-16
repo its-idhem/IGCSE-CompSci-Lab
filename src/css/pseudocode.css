@@ -354,9 +354,12 @@ select.settings-select {
   color: var(--line-num);
   user-select: none;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-width: none;
   border-right: 1px solid var(--border);
 }
+#line-numbers::-webkit-scrollbar { display: none; }
 #line-numbers span {
   display: block;
   padding-right: 10px;
