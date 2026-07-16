@@ -267,6 +267,13 @@ body.light-mode .comp-item:hover {
   width:260px; min-width:140px; max-width:600px;
   background:var(--bg-panel);
   border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden;
+  transition: width 0.2s ease;
+}
+#right-sidebar.rp-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left: none;
+  overflow: hidden;
 }
 
 #sidebar-resizer {
@@ -277,6 +284,28 @@ body.light-mode .comp-item:hover {
 #sidebar-resizer:hover, #sidebar-resizer.dragging {
   background: var(--accent-dim);
 }
+#sidebar-resizer.rp-collapsed { display: none; }
+
+#btn-open-panel {
+  display: none;
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 150;
+  width: 20px;
+  height: 52px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--accent);
+  font-size: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0;
+}
+#btn-open-panel:hover { background: var(--accent); color: var(--bg-base); }
 #truth-table-container { flex:1; overflow:auto; padding:8px; }
 #truth-table-container::-webkit-scrollbar { width:4px; }
 #truth-table-container::-webkit-scrollbar-thumb { background:var(--scrollbar); border-radius:2px; }
@@ -432,6 +461,13 @@ body.light-mode .comp-item:hover {
 }
 
 @media (max-width: 640px) {
+  #titlebar { overflow: hidden; }
+  .title-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .title-actions::-webkit-scrollbar { display: none; }
   .title-center { display: none; }
   .title-btn-label { display: none; }
   #attr-link { display: none; }
@@ -467,6 +503,7 @@ body.light-mode .comp-item:hover {
 
   #workspace { position: relative; }
   #sidebar-resizer { display: none; }
+  #btn-open-panel { display: none !important; }
 
   #canvas-wrapper { flex: 1; }
 
