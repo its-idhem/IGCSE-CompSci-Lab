@@ -446,6 +446,13 @@ footer {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 640px) {
+  #titlebar { overflow: hidden; }
+  .title-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .title-actions::-webkit-scrollbar { display: none; }
   #hero { padding: 64px 16px 48px; }
   .tools-grid { grid-template-columns: 1fr; }
   .section { padding-left: 16px; padding-right: 16px; }
