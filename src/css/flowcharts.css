@@ -634,6 +634,13 @@ body.light-mode #console-out { background: #fff; }
 }
 
 @media (max-width: 640px) {
+  #titlebar { overflow: hidden; }
+  .title-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .title-actions::-webkit-scrollbar { display: none; }
   .title-center { display: none; }
 
   #left-sidebar, #right-panel {
