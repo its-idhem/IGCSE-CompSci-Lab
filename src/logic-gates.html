@@ -67,7 +67,10 @@
     <div id="sidebar-resizer" title="Drag to resize truth table"></div>
 
     <div id="right-sidebar">
-      <div class="sidebar-header">Truth Table</div>
+      <div class="sidebar-header" style="display:flex;justify-content:space-between;align-items:center;">
+        Truth Table
+        <button id="btn-close-panel" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0;" title="Close panel">▶</button>
+      </div>
       <div id="truth-table-container">
         <div class="tt-hint">Place INPUT and OUTPUT components to generate the truth table automatically.</div>
       </div>
@@ -86,6 +89,8 @@
     <a id="attr-link" href="https://github.com/its-idhem" target="_blank" rel="noopener">made by its-idhem</a>
   </div>
 </div>
+
+<button id="btn-open-panel" title="Open panel">◀</button>
 
 <div id="global-tooltip"></div>
 
