@@ -7,7 +7,7 @@
 const GATES = {
   AND:    { w:80,  h:56, inPts:[{x:0,y:16},{x:0,y:40}], outPt:{x:80,y:28}  },
   OR:     { w:80,  h:56, inPts:[{x:0,y:16},{x:0,y:40}], outPt:{x:80,y:28}  },
-  NOT:    { w:72,  h:44, inPts:[{x:0,y:22}],             outPt:{x:72,y:22}  },
+  NOT:    { w:80,  h:44, inPts:[{x:0,y:22}],             outPt:{x:80,y:22}  },
   NAND:   { w:90,  h:56, inPts:[{x:0,y:16},{x:0,y:40}], outPt:{x:90,y:28}  },
   NOR:    { w:90,  h:56, inPts:[{x:0,y:16},{x:0,y:40}], outPt:{x:90,y:28}  },
   XOR:    { w:80,  h:56, inPts:[{x:0,y:16},{x:0,y:40}], outPt:{x:80,y:28}  },
@@ -156,10 +156,10 @@ function drawBody(g,comp){
     else          {stub(66,28,80,28);g.appendChild(txt('text',{x:36,y:28,class:'comp-label'},'OR'));}
   }
   else if(t==='NOT'){
-    fill('M 4,4 L 52,22 L 4,40 Z');
-    bubble(57,22,5);
-    stub(0,22,4,22); stub(62,22,72,22);
-    g.appendChild(txt('text',{x:22,y:22,class:'comp-label'},'NOT'));
+    fill('M 16,4 L 56,22 L 16,40 Z');
+    bubble(61,22,5);
+    stub(0,22,16,22); stub(66,22,80,22);
+    g.appendChild(txt('text',{x:32,y:22,class:'comp-label'},'NOT'));
   }
   else if(t==='XOR'){
     fill('M 12,4 C 28,4 58,10 66,28 C 58,46 28,52 12,52 C 22,36 22,20 12,4 Z');
@@ -1128,7 +1128,7 @@ function miniSVG(type){
   switch(type){
     case 'AND':  mp('M6,2 L22,2 A12,12 0 0 1 22,26 L6,26 Z');break;
     case 'OR':   mp('M6,2 C14,2 28,6 32,14 C28,22 14,26 6,26 C11,18 11,10 6,2 Z');break;
-    case 'NOT':  mp('M2,2 L28,14 L2,26 Z');mc(31,14,3);break;
+    case 'NOT':  mp('M6,2 L28,14 L6,26 Z');mc(31,14,3);break;
     case 'NAND': mp('M6,2 L22,2 A12,12 0 0 1 22,26 L6,26 Z');mc(35,14,3);break;
     case 'NOR':  mp('M6,2 C14,2 28,6 32,14 C28,22 14,26 6,26 C11,18 11,10 6,2 Z');mc(35,14,3);break;
     case 'XOR':  mp('M6,2 C14,2 28,6 32,14 C28,22 14,26 6,26 C11,18 11,10 6,2 Z');mp('M2,2 C8,10 8,18 2,26');break;
@@ -1338,8 +1338,8 @@ function exportPNG(){
       if(t==='NOR'){dot(71,28,5);stub(76,28,90,28);}else stub(66,28,80,28);
     }
     else if(t==='NOT'){
-      ctx.beginPath();ctx.moveTo(4,4);ctx.lineTo(52,22);ctx.lineTo(4,40);ctx.closePath();outline();
-      dot(57,22,5);stub(0,22,4,22);stub(62,22,72,22);
+      ctx.beginPath();ctx.moveTo(16,4);ctx.lineTo(56,22);ctx.lineTo(16,40);ctx.closePath();outline();
+      dot(61,22,5);stub(0,22,16,22);stub(66,22,80,22);
     }
     else if(t==='XOR'){
       ctx.beginPath();ctx.moveTo(12,4);ctx.bezierCurveTo(28,4,58,10,66,28);ctx.bezierCurveTo(58,46,28,52,12,52);ctx.bezierCurveTo(22,36,22,20,12,4);ctx.closePath();outline();
@@ -1369,10 +1369,6 @@ function exportPNG(){
       lines.forEach((ln,i)=>ctx.fillText(ln,5,5+i*16,cw-10));
     }
 
-    if(t!=='COMMENT'){
-      def.inPts.forEach(pt=>dot(pt.x,pt.y,3));
-      if(def.outPt)dot(def.outPt.x,def.outPt.y,3);
-    }
     ctx.restore();
   });
 
@@ -1434,12 +1430,22 @@ function init(){
   const resizer    = document.getElementById('sidebar-resizer');
   const rSidebar   = document.getElementById('right-sidebar');
   const zoomCtrls  = document.getElementById('zoom-controls');
+  const openBtn    = document.getElementById('btn-open-panel');
+  const closeBtn   = document.getElementById('btn-close-panel');
   // Keep zoom controls anchored to the left edge of the right sidebar
-  function updateZoomPos() {
-    if(window.innerWidth<=640)return; // mobile: zoom controls handled by CSS
-    zoomCtrls.style.right = (rSidebar.offsetWidth + 12) + 'px';
+  function positionZoomControls() {
+    if(window.innerWidth<=640) return; // mobile: zoom controls handled by CSS
+    if (rSidebar.classList.contains('rp-collapsed')) {
+      zoomCtrls.style.right = '12px';
+      if (openBtn) openBtn.style.display = 'block';
+    } else {
+      zoomCtrls.style.right = (rSidebar.offsetWidth + 12) + 'px';
+      if (openBtn) openBtn.style.display = 'none';
+    }
+    zoomCtrls.style.bottom = '44px';
   }
-  updateZoomPos(); // set correct position on load
+  positionZoomControls(); // set correct position on load
+  window.addEventListener('resize', positionZoomControls);
   let sidebarDrag = null;
   resizer.addEventListener('mousedown', e=>{
     e.preventDefault();
@@ -1452,13 +1458,40 @@ function init(){
     const delta = sidebarDrag.startX - e.clientX;
     const newW  = Math.max(140, Math.min(600, sidebarDrag.startW + delta));
     rSidebar.style.width = newW + 'px';
-    updateZoomPos();
+    positionZoomControls();
   });
   document.addEventListener('mouseup', ()=>{
     if(!sidebarDrag) return;
     sidebarDrag = null;
     resizer.classList.remove('dragging');
   });
+
+  // ── Right sidebar collapse/expand ──
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      rSidebar.classList.add('rp-collapsed');
+      resizer.classList.add('rp-collapsed');
+      positionZoomControls();
+    });
+  }
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      rSidebar.classList.remove('rp-collapsed');
+      resizer.classList.remove('rp-collapsed');
+      // Wait for the CSS width transition to finish before repositioning
+      var _done = false;
+      function _place() {
+        if (_done) return; _done = true;
+        rSidebar.removeEventListener('transitionend', _onT);
+        positionZoomControls();
+      }
+      function _onT(e) {
+        if (e.target === rSidebar && e.propertyName === 'width') _place();
+      }
+      rSidebar.addEventListener('transitionend', _onT);
+      setTimeout(_place, 250);
+    });
+  }
 }
 
 init();
