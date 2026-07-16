@@ -137,6 +137,7 @@ html, body {
 .title-btn:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-bright); }
 .title-btn.accent { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 .title-btn.accent:hover { background: var(--accent); color: var(--bg-base); }
+#btn-theme { font-size: 14px; padding: 4px 10px; }
 
 #main-content {
   display: flex;
@@ -918,10 +919,15 @@ select.settings-select {
     height: 46px;
     padding: 0 10px;
     gap: 8px;
+    overflow: hidden;
   }
-  #titlebar .logo span { display: none; }
-  .title-center { display: none; }
-  .title-actions .title-btn:not(.accent) { display: none; }
+  .title-actions {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .title-actions::-webkit-scrollbar { display: none; }
+  .title-actions .title-btn { flex-shrink: 0; }
   .title-btn.accent { padding: 7px 16px; font-size: 12px; }
 
   #main-content {
@@ -1018,3 +1024,37 @@ select.settings-select {
   background: var(--accent-glow);
 }
 .mobile-nav-btn:active { opacity: 0.75; }
+
+#file-context-menu {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  padding: 4px 0;
+  min-width: 140px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+#file-context-menu.visible { display: block; }
+.ctx-menu-item {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-family: var(--font-ui);
+}
+.ctx-menu-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.ctx-menu-item.ctx-menu-danger { color: var(--red); }
+.ctx-menu-item.ctx-menu-danger:hover { background: var(--red-dim); color: var(--red); }
+.ctx-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  padding: 0;
+  cursor: default;
+}
+.ctx-menu-divider:hover { background: var(--border); }

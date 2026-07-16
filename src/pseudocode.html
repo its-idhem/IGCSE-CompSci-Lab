@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/pseudocode.css">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon-file.svg">
 </head>
 <body>
 
@@ -34,6 +35,7 @@
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       Export .txt
     </button>
+    <button class="title-btn" id="btn-theme" title="Toggle light/dark mode">⏾</button>
     <button class="title-btn accent" onclick="runCode()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Run
@@ -228,6 +230,13 @@
       <button id="case-fix-no">No, Run As-Is</button>
     </div>
   </div>
+</div>
+
+<div id="file-context-menu">
+  <div class="ctx-menu-item" data-action="rename">Edit Name</div>
+  <div class="ctx-menu-item" data-action="duplicate">Duplicate</div>
+  <div class="ctx-menu-item ctx-menu-divider"></div>
+  <div class="ctx-menu-item ctx-menu-danger" data-action="delete">Delete</div>
 </div>
 
 <script src="js/pseudocode.js"></script>

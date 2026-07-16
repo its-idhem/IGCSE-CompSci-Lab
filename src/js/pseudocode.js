@@ -1834,6 +1834,7 @@ function renderTabs() {
       tab.appendChild(x);
     }
     tab.addEventListener('click', () => switchFile(f.id));
+    tab.addEventListener('contextmenu', e => showContextMenu(e, f.id));
     tabBar.appendChild(tab);
   });
   // "+" new-file button
@@ -1869,9 +1870,12 @@ function renderTabs() {
       nameSpan.textContent = f.name;
       nameSpan.className = 'sidebar-filename';
       nameSpan.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      nameSpan.title = 'Double-click to rename';
+      nameSpan.addEventListener('dblclick', e => { e.stopPropagation(); startRenameInline(f.id, nameSpan); });
       label.appendChild(nameSpan);
       label.addEventListener('click', () => switchFile(f.id));
       row.appendChild(label);
+      row.addEventListener('contextmenu', e => showContextMenu(e, f.id));
       // Pencil rename button
       const editBtn = document.createElement('button');
       editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
@@ -1919,6 +1923,70 @@ function closeFile(id) {
     updateEditor();
   }
   renderTabs();
+}
+
+function duplicateFile(id) {
+  const f = files.find(f => f.id === id);
+  if (!f) return;
+  const baseName = f.name.replace(/\.[^.]+$/, '');
+  const ext = f.name.includes('.') ? f.name.slice(f.name.lastIndexOf('.')) : '';
+  let copyName = `${baseName}_copy${ext}`;
+  let counter = 2;
+  while (files.some(f => f.name === copyName)) {
+    copyName = `${baseName}_copy${counter}${ext}`;
+    counter++;
+  }
+  const newId = nextFileId++;
+  files.push({ id: newId, name: copyName, content: f.content });
+  activeFileId = newId;
+  codeInput.value = f.content;
+  updateEditor();
+  renderTabs();
+  consoleLog(`// Duplicated as "${copyName}"`, 'info');
+}
+
+function deleteFile(id) {
+  if (files.length <= 1) {
+    consoleLog('// Cannot delete the last file.', 'error');
+    return;
+  }
+  const idx = files.findIndex(f => f.id === id);
+  files.splice(idx, 1);
+  if (activeFileId === id) {
+    activeFileId = files[Math.min(idx, files.length - 1)].id;
+    codeInput.value = files.find(f => f.id === activeFileId).content;
+    updateEditor();
+  }
+  renderTabs();
+}
+
+// ── Context menu ─────────────────────────────────────────────
+let _ctxMenuFileId = null;
+
+function showContextMenu(e, fileId) {
+  e.preventDefault();
+  e.stopPropagation();
+  _ctxMenuFileId = fileId;
+  const menu = document.getElementById('file-context-menu');
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.classList.add('visible');
+}
+
+function hideContextMenu() {
+  const menu = document.getElementById('file-context-menu');
+  menu.classList.remove('visible');
+  _ctxMenuFileId = null;
+}
+
+// ── Theme toggle ─────────────────────────────────────────────
+function toggleTheme() {
+  const light = document.body.classList.toggle('light-mode');
+  const btn = document.getElementById('btn-theme');
+  btn.textContent = light ? '\u2600' : '\u23FE';
+  const chk = document.getElementById('light-mode-toggle');
+  if (chk) chk.checked = light;
+  localStorage.setItem('cie_theme', light ? 'light' : 'dark');
 }
 
 function clearCode() {
@@ -2032,7 +2100,12 @@ function toggleAutoSave(val)    { autoSaveEnabled = val; }
 function toggleLinter(val)      { linterEnabled = val; if (!val) document.getElementById('linter-badge').innerHTML = ''; }
 function toggleEnforceDeclare(val) { enforceDeclareEnabled = val; }
 function toggleLineNumbers(val) { lineNumbersEnabled = val; lineNumbers.style.display = val ? 'block' : 'none'; updateEditor(); }
-function toggleLightMode(val)   { document.body.classList.toggle('light-mode', val); }
+function toggleLightMode(val) {
+  document.body.classList.toggle('light-mode', val);
+  const btn = document.getElementById('btn-theme');
+  if (btn) btn.textContent = val ? '\u2600' : '\u23FE';
+  localStorage.setItem('cie_theme', val ? 'light' : 'dark');
+}
 function toggleInputMode(val) {
   inputMode = val;
   localStorage.setItem('cie_inputMode', val);
@@ -2098,6 +2171,7 @@ OUTPUT "Grade: ", Grade`;
     if (e.key === 'Escape') {
       document.getElementById('input-modal-overlay').classList.remove('visible');
       document.getElementById('case-fix-overlay').classList.remove('visible');
+      hideContextMenu();
     }
   });
 
@@ -2171,6 +2245,66 @@ OUTPUT "Grade: ", Grade`;
     });
     positionOpenBtn();
   })();
+
+  // ── Theme button ────────────────────────────────────────────
+  const themeBtn = document.getElementById('btn-theme');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+  // ── Context menu actions ────────────────────────────────────
+  document.getElementById('file-context-menu').addEventListener('click', e => {
+    const item = e.target.closest('.ctx-menu-item');
+    if (!item || item.dataset.action === undefined) return;
+    if (_ctxMenuFileId === null) return;
+    switch (item.dataset.action) {
+      case 'rename': {
+        const f = files.find(f => f.id === _ctxMenuFileId);
+        if (!f) break;
+        const sidebarList = document.getElementById('sidebar-file-list');
+        if (sidebarList) {
+          const rows = sidebarList.querySelectorAll('.snippet-item');
+          rows.forEach((row, idx) => {
+            if (files[idx] && files[idx].id === _ctxMenuFileId) {
+              const nameSpan = row.querySelector('.sidebar-filename');
+              if (nameSpan) startRenameInline(_ctxMenuFileId, nameSpan);
+            }
+          });
+        }
+        // Also try to find the tab name element
+        const tabBar = document.getElementById('editor-tabs');
+        if (tabBar) {
+          const tabs = tabBar.querySelectorAll('.editor-tab');
+          tabs.forEach(tab => {
+            const nameSpan = tab.querySelector('span:not(.tab-dot)');
+            if (nameSpan) {
+              const tabIdx = [...tabs].indexOf(tab);
+              if (tabIdx < files.length && files[tabIdx].id === _ctxMenuFileId) {
+                startRenameInline(_ctxMenuFileId, nameSpan);
+              }
+            }
+          });
+        }
+        break;
+      }
+      case 'duplicate': duplicateFile(_ctxMenuFileId); break;
+      case 'delete':    deleteFile(_ctxMenuFileId);    break;
+    }
+    hideContextMenu();
+  });
+
+  // Dismiss context menu on outside click
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('file-context-menu');
+    if (menu && !menu.contains(e.target)) hideContextMenu();
+  });
+
+  // ── Restore theme from localStorage ──
+  const savedTheme = localStorage.getItem('cie_theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+    if (themeBtn) themeBtn.textContent = '\u2600';
+    const chk = document.getElementById('light-mode-toggle');
+    if (chk) chk.checked = true;
+  }
 
   // ── Restore input mode from localStorage ──
   const savedMode = localStorage.getItem('cie_inputMode');
