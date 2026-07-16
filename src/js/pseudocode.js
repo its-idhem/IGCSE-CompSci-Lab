@@ -359,6 +359,7 @@ let linterEnabled = true;
 let lineNumbersEnabled = true;
 let enforceDeclareEnabled = true;
 let currentSidebarPanel = 'snippets';
+let inputMode = 'popup';
 
 function updateEditor() {
   const code = codeInput.value;
@@ -522,7 +523,7 @@ let interpFunctions  = {};
 let declaredTypes    = {};   // varName → 'INTEGER' | 'REAL' | 'CHAR' | 'STRING' | 'BOOLEAN'
 let isRunning        = false;
 let interpDeadline   = Infinity; // ms timestamp; exceeded → throw timeout error
-const RUN_TIMEOUT_MS = 100000;    // 100 seconds
+const RUN_TIMEOUT_MS = 900000;    // 900 seconds
 // Yield counter — every N statements we do a real setTimeout to break the
 // microtask chain and keep the browser responsive on large programs.
 let interpYieldCounter = 0;
@@ -568,6 +569,28 @@ function consoleClear() {
 // ── INPUT modal ──────────────────────────────────────────────
 function requestInput(varName, typeName) {
   return new Promise(resolve => {
+    if (inputMode === 'console') {
+      const inputForm = document.getElementById('input-form');
+      const promptLabel = document.getElementById('input-prompt-label');
+      const inputField = document.getElementById('input-field');
+      const submitBtn = document.getElementById('input-submit');
+      promptLabel.textContent = `INPUT ${varName} >`;
+      inputField.value = '';
+      inputForm.classList.add('visible');
+      inputField.focus();
+      const doSubmit = () => {
+        const val = inputField.value;
+        inputForm.classList.remove('visible');
+        submitBtn.removeEventListener('click', doSubmit);
+        inputField.removeEventListener('keydown', kh);
+        consoleLog(`${varName} = ${val}`, 'input-line');
+        resolve(val);
+      };
+      const kh = e => { if (e.key === 'Enter') doSubmit(); };
+      submitBtn.addEventListener('click', doSubmit);
+      inputField.addEventListener('keydown', kh);
+      return;
+    }
     const overlay  = document.getElementById('input-modal-overlay');
     const modalVar = document.getElementById('modal-var');
     const modalInp = document.getElementById('modal-input');
@@ -2010,6 +2033,10 @@ function toggleLinter(val)      { linterEnabled = val; if (!val) document.getEle
 function toggleEnforceDeclare(val) { enforceDeclareEnabled = val; }
 function toggleLineNumbers(val) { lineNumbersEnabled = val; lineNumbers.style.display = val ? 'block' : 'none'; updateEditor(); }
 function toggleLightMode(val)   { document.body.classList.toggle('light-mode', val); }
+function toggleInputMode(val) {
+  inputMode = val;
+  localStorage.setItem('cie_inputMode', val);
+}
 
 // ── INIT ─────────────────────────────────────────────────────
 function init() {
@@ -2121,6 +2148,37 @@ OUTPUT "Grade: ", Grade`;
       document.addEventListener('mouseup',   onUp);
     });
   })();
+
+  // ── Right panel collapse/expand ──
+  (function() {
+    const rightPanel = document.getElementById('right-panel');
+    const resizer = document.getElementById('right-resizer');
+    const openBtn = document.getElementById('btn-open-panel');
+    const closeBtn = document.getElementById('btn-close-panel');
+    if (!rightPanel || !openBtn || !closeBtn) return;
+    function positionOpenBtn() {
+      openBtn.style.display = rightPanel.classList.contains('rp-collapsed') ? 'block' : 'none';
+    }
+    closeBtn.addEventListener('click', () => {
+      rightPanel.classList.add('rp-collapsed');
+      resizer.classList.add('rp-collapsed');
+      positionOpenBtn();
+    });
+    openBtn.addEventListener('click', () => {
+      rightPanel.classList.remove('rp-collapsed');
+      resizer.classList.remove('rp-collapsed');
+      positionOpenBtn();
+    });
+    positionOpenBtn();
+  })();
+
+  // ── Restore input mode from localStorage ──
+  const savedMode = localStorage.getItem('cie_inputMode');
+  if (savedMode === 'popup' || savedMode === 'console') {
+    inputMode = savedMode;
+    const sel = document.getElementById('input-mode-select');
+    if (sel) sel.value = savedMode;
+  }
 }
 
 init();
