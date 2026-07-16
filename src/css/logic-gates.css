@@ -544,7 +544,6 @@ body.light-mode .comp-item:hover {
 @media (orientation: landscape) and (max-height: 500px) {
   #zoom-controls {
     bottom: 12px !important;
-    right: 12px !important;
   }
   #mobile-nav { height: 40px; }
   .mobile-nav-btn { font-size: 8px; }
