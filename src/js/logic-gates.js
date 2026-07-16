@@ -1434,7 +1434,10 @@ function init(){
   const closeBtn   = document.getElementById('btn-close-panel');
   // Keep zoom controls anchored to the left edge of the right sidebar
   function positionZoomControls() {
-    if(window.innerWidth<=640) return; // mobile: zoom controls handled by CSS
+    // Detect mobile: either narrow viewport or landscape phone (small height + moderate width)
+    const isMobile = window.innerWidth<=640 ||
+                     (window.innerHeight<=500 && window.innerWidth<=1000);
+    if(isMobile) return; // mobile: zoom controls handled by CSS
     if (rSidebar.classList.contains('rp-collapsed')) {
       zoomCtrls.style.right = '12px';
       if (openBtn) openBtn.style.display = 'block';
@@ -1446,6 +1449,9 @@ function init(){
   }
   positionZoomControls(); // set correct position on load
   window.addEventListener('resize', positionZoomControls);
+  window.addEventListener('orientationchange', function(){
+    setTimeout(positionZoomControls, 300);
+  });
   let sidebarDrag = null;
   resizer.addEventListener('mousedown', e=>{
     e.preventDefault();

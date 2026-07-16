@@ -121,6 +121,11 @@ let connSegDrag = null; // {connId, ptIndex, startX, startY, origX, origY}
 let _marqDidSelect = false; // prevents svg click from wiping marquee selection
 let _lastTapTime = 0; // double-tap detection on touch
 let _lastTapSymId = null;
+let _longPressTimer = null;
+let _longPressSymId = null;
+let _longPressStartX = 0;
+let _longPressStartY = 0;
+let _longPressMoveOk = false;
 
 // ── DOM refs ──────────────────────────────────────────────
 const wrap        = document.getElementById('canvas-wrapper');
@@ -159,7 +164,10 @@ function positionZoomControls() {
   const zc  = document.getElementById('zoom-controls');
   const obp = document.getElementById('btn-open-panel');
   if (!zc) return;
-  if (window.innerWidth <= 640) {
+  // Detect mobile: either narrow viewport or landscape phone (small height + moderate width)
+  const isMobile = window.innerWidth <= 640 ||
+                   (window.innerHeight <= 500 && window.innerWidth <= 1000);
+  if (isMobile) {
     zc.style.right  = '12px';
     zc.style.bottom = window.innerHeight <= 450 ? '12px' : '52px';
     if (obp) obp.style.display = 'none';
@@ -391,13 +399,13 @@ function renderSym(sym) {
   // dblclick and contextmenu handled via delegation on nodesG (see below)
   nodesG.appendChild(g);
 
-  // ── Touch drag for this symbol ────────────────────────
+  // ── Touch drag + long-press context menu for this symbol ──
   g.addEventListener('touchstart', function(e){
     if(e.target.classList.contains('port-hit')) return; // handled by port-hit
     if(e.target.getAttribute('data-resize-id')) return;
     e.stopPropagation(); e.preventDefault();
     touchPanMob = null; // cancel any canvas pan
-    if(!selSet.has(sym.id)){ selId=sym.id; selSet.clear(); renderAll(); }
+    if(!selSet.has(sym.id)){ selId=sym.id; selSet.clear(); _syncSelectionClasses(); }
     const touch = e.touches[0];
     const sp = clientToSVG(touch.clientX, touch.clientY);
     const toMove = selSet.size>0 ? [...selSet] : [sym.id];
@@ -406,6 +414,18 @@ function renderSym(sym) {
       const s=symbols.find(function(ss){return ss.id===id;}); if(s) origPositions[id]={x:s.x,y:s.y};
     });
     symDrag = {id:sym.id, startX:sp.x, startY:sp.y, origPositions};
+    // Start long-press timer for context menu
+    _longPressSymId = sym.id;
+    _longPressStartX = touch.clientX;
+    _longPressStartY = touch.clientY;
+    _longPressMoveOk = true;
+    _longPressTimer = setTimeout(function(){
+      if(_longPressMoveOk && _longPressSymId === sym.id){
+        _longPressMoveOk = false;
+        symDrag = null;
+        showCtxMenu({clientX: _longPressStartX, clientY: _longPressStartY}, sym);
+      }
+    }, 500);
   }, {passive:false});
 }
 
@@ -589,6 +609,39 @@ connsG.addEventListener('contextmenu', function(e){
   const conn=connections.find(function(c){return c.id===cg.dataset.connId;});
   if(conn) showConnCtx(e,conn);
 });
+
+// Connection long-press on mobile
+(function(){
+  let _connLongPressTimer=null;
+  let _connLongPressId=null;
+  let _connLongPressX=0,_connLongPressY=0;
+  connsG.addEventListener('touchstart',function(e){
+    const cg=e.target.closest('[data-conn-id]'); if(!cg) return;
+    const touch=e.touches[0];
+    _connLongPressId=cg.dataset.connId;
+    _connLongPressX=touch.clientX;
+    _connLongPressY=touch.clientY;
+    _connLongPressTimer=setTimeout(function(){
+      const conn=connections.find(function(c){return c.id===_connLongPressId;});
+      if(conn){
+        selId=conn.id; selSet.clear(); renderAll();
+        showConnCtx({clientX:_connLongPressX,clientY:_connLongPressY},conn);
+      }
+      _connLongPressTimer=null;
+    },500);
+  },{passive:true});
+  connsG.addEventListener('touchmove',function(e){
+    if(_connLongPressTimer){
+      const touch=e.touches[0];
+      if(Math.abs(touch.clientX-_connLongPressX)>10||Math.abs(touch.clientY-_connLongPressY)>10){
+        clearTimeout(_connLongPressTimer); _connLongPressTimer=null;
+      }
+    }
+  },{passive:true});
+  connsG.addEventListener('touchend',function(e){
+    if(_connLongPressTimer){clearTimeout(_connLongPressTimer);_connLongPressTimer=null;}
+  },{passive:true});
+})();
 
 // ══════════════════════════════════════════════════════════
 //  SIDEBAR DRAG-TO-PLACE
@@ -1885,6 +1938,17 @@ wrap.addEventListener('touchstart',function(e){
 },{passive:false});
 
 document.addEventListener('touchmove',function(e){
+  // Cancel long-press if finger moves significantly
+  if(_longPressTimer){
+    if(e.touches.length===1){
+      const t=e.touches[0];
+      if(Math.abs(t.clientX-_longPressStartX)>10||Math.abs(t.clientY-_longPressStartY)>10){
+        clearTimeout(_longPressTimer);
+        _longPressTimer=null;
+        _longPressMoveOk=false;
+      }
+    }
+  }
   if(e.touches.length===2&&pinchStartMob){
     e.preventDefault();
     const d=touchDistMob(e); if(!d) return;
@@ -1947,6 +2011,12 @@ document.addEventListener('touchmove',function(e){
 },{passive:false});
 
 document.addEventListener('touchend',function(e){
+  // Cancel long-press timer
+  if(_longPressTimer){
+    clearTimeout(_longPressTimer);
+    _longPressTimer=null;
+    _longPressMoveOk=false;
+  }
   pinchStartMob=null;
   if(touchPanMob){touchPanMob=null;return;}
   if(symDrag){
@@ -2056,3 +2126,6 @@ requestAnimationFrame(function(){
   positionZoomControls();
 });
 window.addEventListener('resize',positionZoomControls);
+window.addEventListener('orientationchange',function(){
+  setTimeout(positionZoomControls,300);
+});
