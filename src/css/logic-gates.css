@@ -458,6 +458,7 @@ body.light-mode .comp-item:hover {
   #left-sidebar  { width: 160px; }
   #right-sidebar { width: 200px; }
   .title-center  { display: none; }
+  .title-actions { margin-left: auto; }
 }
 
 @media (max-width: 640px) {
@@ -529,6 +530,15 @@ body.light-mode .comp-item:hover {
   #truth-table-container { overflow: auto; }
   .truth-table { font-size: 11px; }
   .truth-table th, .truth-table td { padding: 5px 8px; }
+}
+
+@media (max-height: 450px) and (max-width: 640px) {
+  #zoom-controls {
+    bottom: 12px !important;
+  }
+  #mobile-nav { height: 40px; }
+  .mobile-nav-btn { font-size: 8px; }
+  .mobile-nav-btn svg { width: 16px; height: 16px; }
 }
 
 @media (max-width: 400px) {

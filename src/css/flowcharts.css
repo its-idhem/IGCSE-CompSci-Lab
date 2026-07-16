@@ -630,6 +630,7 @@ body.light-mode #console-out { background: #fff; }
 
 @media (max-width: 900px) {
   .title-center { display: none; }
+  .title-actions { margin-left: auto; }
   #right-panel  { width: 240px; }
 }
 
@@ -684,6 +685,15 @@ body.light-mode #console-out { background: #fff; }
   .comp-item { padding: 8px 6px; }
 
   .made-by-link { display: none; }
+}
+
+@media (max-height: 450px) and (max-width: 640px) {
+  #zoom-controls {
+    bottom: 12px !important;
+  }
+  #mobile-nav { height: 40px; }
+  .mobile-nav-btn { font-size: 8px; }
+  .mobile-nav-btn svg { width: 16px; height: 16px; }
 }
 
 @media (max-width: 400px) {
