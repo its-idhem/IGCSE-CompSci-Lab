@@ -115,6 +115,13 @@
           <label>Line Numbers</label>
           <label class="toggle"><input type="checkbox" id="ln-toggle" checked onchange="toggleLineNumbers(this.checked)"><span class="slider"></span></label>
         </div>
+        <div class="settings-item">
+          <label>Input Mode</label>
+          <select class="settings-select" id="input-mode-select" onchange="toggleInputMode(this.value)">
+            <option value="popup">Popup</option>
+            <option value="console">Console</option>
+          </select>
+        </div>
         <div class="snippet-category" style="margin-top:12px">About</div>
         <div style="font-size:11px;color:var(--text-muted);padding:4px 4px;line-height:1.8;">
           Pseudocode IDE<br>
@@ -159,6 +166,7 @@
     <div id="right-tabs">
       <div class="right-tab active" onclick="switchRightTab('console')" id="rt-console">Console</div>
       <div class="right-tab" onclick="switchRightTab('trace')" id="rt-trace">Trace Table</div>
+      <button id="btn-close-panel" class="rp-close-btn" title="Close panel">◀</button>
     </div>
     <div id="right-content">
       <div class="right-pane active" id="pane-console">
@@ -197,6 +205,8 @@
     </div>
   </div>
 </div>
+
+<button id="btn-open-panel" title="Open panel">▶</button>
 
 <div id="input-modal-overlay">
   <div id="input-modal">
