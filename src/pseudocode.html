@@ -221,6 +221,17 @@
 
 <div id="snippet-tooltip"></div>
 
+<div id="mobile-code-popup">
+  <div id="mobile-code-popup-header">
+    <span id="mobile-code-popup-name"></span>
+    <div id="mobile-code-popup-actions">
+      <button class="mob-copy-btn" id="mob-copy-code-btn">Copy Code</button>
+      <button class="mob-close-btn" id="mob-close-popup-btn">✕</button>
+    </div>
+  </div>
+  <pre id="mobile-code-popup-body"></pre>
+</div>
+
 <div id="case-fix-overlay">
   <div id="case-fix-modal">
     <h3>Lowercase Keywords Detected</h3>
@@ -304,6 +315,7 @@ window.addEventListener('resize', () => {
     const rightPanel = document.getElementById('right-panel');
     sidebar.classList.remove('mobile-visible');
     rightPanel.classList.remove('mobile-visible');
+    hideMobileCodePopup();
   }
 });
 </script>

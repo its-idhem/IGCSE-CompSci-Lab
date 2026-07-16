@@ -2028,6 +2028,7 @@ function buildSnippets() {
   const list = document.getElementById('snippets-list');
   const tooltip = document.getElementById('snippet-tooltip');
   const sidebarPanel = document.getElementById('sidebar-panel');
+  const isMobile = window.innerWidth <= 640;
   if (!tooltip.dataset.hoverInit) {
     tooltip.dataset.hoverInit = '1';
     tooltip.addEventListener('mouseenter', () => clearTimeout(snippetTooltipTimeout));
@@ -2043,23 +2044,41 @@ function buildSnippets() {
       const el = document.createElement('div');
       el.className = 'snippet-item';
       el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>${escHtml(item.name)}`;
-      el.title = `Insert: ${item.name}`;
-      el.addEventListener('click', () => insertSnippet(item.code));
-      const highlighted = highlight(item.code);
-      el.addEventListener('mouseenter', e => {
-        clearTimeout(snippetTooltipTimeout);
-        tooltip.innerHTML = `<div class="tt-name">${escHtml(item.name)}</div><pre>${highlighted}</pre>`;
-        tooltip.style.display = 'block';
-        positionSnippetTooltip(e, tooltip, sidebarPanel);
-      });
-      el.addEventListener('mousemove', e => {
-        positionSnippetTooltip(e, tooltip, sidebarPanel);
-      });
-      el.addEventListener('mouseleave', () => {
-        snippetTooltipTimeout = setTimeout(() => {
-          tooltip.style.display = 'none';
-        }, 150);
-      });
+      if (isMobile) {
+        el.title = `View: ${item.name}`;
+        el.addEventListener('click', () => {
+          const highlighted = highlight(item.code);
+          showMobileCodePopup(item.name, item.code, highlighted);
+        });
+      } else {
+        el.title = `Insert: ${item.name}`;
+        el.addEventListener('click', () => insertSnippet(item.code));
+        const highlighted = highlight(item.code);
+        el.addEventListener('mouseenter', e => {
+          clearTimeout(snippetTooltipTimeout);
+          tooltip.innerHTML = `
+            <div class="tt-header">
+              <span class="tt-name">${escHtml(item.name)}</span>
+              <button class="tt-copy">Copy</button>
+            </div>
+            <pre>${highlighted}</pre>`;
+          tooltip.style.display = 'block';
+          positionSnippetTooltip(e, tooltip, sidebarPanel);
+          const copyBtn = tooltip.querySelector('.tt-copy');
+          copyBtn.addEventListener('click', e2 => {
+            e2.stopPropagation();
+            copyCodeToClipboard(item.code, copyBtn);
+          });
+        });
+        el.addEventListener('mousemove', e => {
+          positionSnippetTooltip(e, tooltip, sidebarPanel);
+        });
+        el.addEventListener('mouseleave', () => {
+          snippetTooltipTimeout = setTimeout(() => {
+            tooltip.style.display = 'none';
+          }, 150);
+        });
+      }
       list.appendChild(el);
     });
   });
@@ -2072,6 +2091,47 @@ function positionSnippetTooltip(e, tooltip, sidebarPanel) {
   ty = Math.max(8, Math.min(window.innerHeight - tooltip.offsetHeight - 8, ty));
   tooltip.style.left = tx + 'px';
   tooltip.style.top = ty + 'px';
+}
+
+function showMobileCodePopup(name, code, highlighted) {
+  const popup = document.getElementById('mobile-code-popup');
+  document.getElementById('mobile-code-popup-name').textContent = name;
+  document.getElementById('mobile-code-popup-body').innerHTML = highlighted;
+  const copyBtn = document.getElementById('mob-copy-code-btn');
+  copyBtn.classList.remove('copied');
+  copyBtn.textContent = 'Copy Code';
+  popup.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideMobileCodePopup() {
+  document.getElementById('mobile-code-popup').classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+function copyCodeToClipboard(text, btn) {
+  const originalText = btn.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.classList.remove('copied');
+    }, 2000);
+  });
 }
 
 function insertSnippet(code) {
@@ -2172,6 +2232,7 @@ OUTPUT "Grade: ", Grade`;
       document.getElementById('input-modal-overlay').classList.remove('visible');
       document.getElementById('case-fix-overlay').classList.remove('visible');
       hideContextMenu();
+      hideMobileCodePopup();
     }
   });
 
@@ -2185,6 +2246,16 @@ OUTPUT "Grade: ", Grade`;
   document.getElementById('case-fix-no').addEventListener('click', () => {
     document.getElementById('case-fix-overlay').classList.remove('visible');
     _doRun();
+  });
+
+  // ── Mobile code popup buttons ──────────────────────────────────
+  document.getElementById('mob-close-popup-btn').addEventListener('click', hideMobileCodePopup);
+  document.getElementById('mobile-code-popup').addEventListener('click', e => {
+    if (e.target === e.currentTarget) hideMobileCodePopup();
+  });
+  document.getElementById('mob-copy-code-btn').addEventListener('click', function () {
+    const code = document.getElementById('mobile-code-popup-body').textContent;
+    copyCodeToClipboard(code, this);
   });
 
   // ── Resizable right panel ─────────────────────────────────────
