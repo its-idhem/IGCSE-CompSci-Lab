@@ -436,6 +436,13 @@ select.settings-select {
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
+  transition: width 0.2s ease;
+}
+#right-panel.rp-collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left: none;
+  overflow: hidden;
 }
 
 #right-resizer {
@@ -458,6 +465,7 @@ select.settings-select {
 #right-resizer.dragging::after {
   background: var(--accent);
 }
+#right-resizer.rp-collapsed { display: none; }
 #right-tabs {
   display: flex;
   background: var(--bg-sidebar);
@@ -479,6 +487,39 @@ select.settings-select {
 }
 .right-tab:hover { color: var(--text-secondary); }
 .right-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.rp-close-btn {
+  flex: 0;
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px 10px;
+  font-size: 12px;
+  transition: var(--transition);
+}
+.rp-close-btn:hover { color: var(--text-primary); }
+
+#btn-open-panel {
+  display: none;
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 150;
+  width: 20px;
+  height: 52px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-bright);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--accent);
+  font-size: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0;
+}
+#btn-open-panel:hover { background: var(--accent); color: var(--bg-base); }
 #right-content {
   flex: 1;
   overflow: hidden;
@@ -928,6 +969,8 @@ select.settings-select {
     display: none !important;
   }
   #right-panel.mobile-visible { display: flex !important; }
+
+  #btn-open-panel { display: none !important; }
 
   #action-bar { padding: 10px 12px; gap: 10px; }
   .action-btn { padding: 13px 8px; font-size: 13px; }
