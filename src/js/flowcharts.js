@@ -164,14 +164,14 @@ function positionZoomControls() {
   const zc  = document.getElementById('zoom-controls');
   const obp = document.getElementById('btn-open-panel');
   if (!zc) return;
-  const isPortraitMobile = window.innerWidth <= 640 && window.innerHeight > window.innerWidth;
-  if (isPortraitMobile) {
+  const isNarrowMobile = window.innerWidth <= 640;
+  const isLandscapePhone = !isNarrowMobile && window.innerHeight <= 500 && window.innerWidth <= 1000;
+  if (isNarrowMobile) {
     zc.style.right  = '12px';
     zc.style.bottom = window.innerHeight <= 450 ? '12px' : '52px';
     if (obp) obp.style.display = 'none';
     return;
   }
-  // Landscape or desktop: position horizontal edge relative to right panel
   if (rightPanel.classList.contains('rp-collapsed')) {
     zc.style.right  = '16px';
     if (obp) obp.style.display = 'block';
@@ -180,7 +180,6 @@ function positionZoomControls() {
     zc.style.right  = (window.innerWidth - rp.left + 8) + 'px';
     if (obp) obp.style.display = 'none';
   }
-  const isLandscapePhone = window.innerHeight <= 500 && window.innerWidth <= 1000;
   zc.style.bottom = isLandscapePhone ? '12px' : '50px';
 }
 

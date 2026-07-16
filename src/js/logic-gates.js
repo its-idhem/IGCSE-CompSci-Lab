@@ -1434,8 +1434,9 @@ function init(){
   const closeBtn   = document.getElementById('btn-close-panel');
   // Keep zoom controls anchored to the left edge of the right sidebar
   function positionZoomControls() {
-    const isPortraitMobile = window.innerWidth<=640 && window.innerHeight>window.innerWidth;
-    if(isPortraitMobile) return; // portrait mobile: zoom controls handled by CSS
+    const isNarrowMobile = window.innerWidth<=640;
+    const isLandscapePhone = !isNarrowMobile && window.innerHeight<=500 && window.innerWidth<=1000;
+    if(isNarrowMobile) return; // narrow mobile: zoom controls handled by CSS
     if (rSidebar.classList.contains('rp-collapsed')) {
       zoomCtrls.style.right = '12px';
       if (openBtn) openBtn.style.display = 'block';
